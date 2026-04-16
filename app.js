@@ -2269,6 +2269,7 @@ setInterval(function(){ fetch('https://mujtaba1212-ceph-landmark-detector.hf.spa
             var lmObj = LM.find(function(l){ return l.id === lmId; });
             if(!lmObj) return;
             pts[lmId] = { x: lm[sym].x / imgW, y: lm[sym].y / imgH };
+            markPlaced(lmId);
             placed++;
           });
 
@@ -2324,6 +2325,8 @@ setInterval(function(){ fetch('https://mujtaba1212-ceph-landmark-detector.hf.spa
           }
 
           apiDone = true;
+          occPlaneManual = false; // reset so fit applies
+          fitOccPlane();
 
           setTimeout(function(){
             cancelAnimationFrame(ringAnim);
