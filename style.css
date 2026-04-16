@@ -128,9 +128,9 @@
   .m-name small{display:block;color:var(--muted);font-size:.56rem;}
   .m-val{font-weight:700;text-align:right;min-width:42px;}
   .m-status{font-size:.56rem;padding:1px 5px;border-radius:4px;text-align:center;min-width:48px;font-weight:600;}
-  .sn{background:rgba(88,166,255,.12);color:var(--accent);}
-  .sh{background:rgba(240,136,62,.12);color:var(--warn);}
-  .sl{background:rgba(63,185,80,.12);color:#3fb950;}
+  .sn{color:var(--accent);}
+  .sh{color:var(--warn);}
+  .sl{color:#3fb950;}
   .m-norm{color:var(--muted);font-size:.56rem;text-align:right;font-family:'DM Mono',monospace;}
   .pt-tip{position:absolute;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:3px 7px;font-size:.6rem;pointer-events:none;white-space:nowrap;z-index:20;color:var(--accent);display:none;}
   /* ── Mode dropdown ── */
@@ -376,6 +376,11 @@
 
   /* ── AI badge NEW chip ── */
   .ai-badge-soon-lit{background:rgba(139,92,246,.3);color:rgba(200,170,255,1);}
+
+  /* ── Landmark hint box ── */
+  .hint-box{background:var(--s2);border:none;border-left:3px solid var(--accent);border-radius:0 6px 6px 0;margin:4px 8px;display:none;padding:8px 10px;font-size:.62rem;color:var(--muted);line-height:1.55;}
+  .hint-box.visible{display:block;}
+  .hint-title{color:var(--accent);font-weight:700;font-size:.65rem;margin-bottom:3px;display:block;}
 
   /* ── Landmark hint subtitle ── */
   .pl-head-sub{color:var(--muted);font-size:.58rem;}
