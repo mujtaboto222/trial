@@ -640,31 +640,42 @@ function markPlaced(id){
   document.getElementById('lmi-'+id)?.classList.add('placed');
   updateProg();updateHdrHint();
   // Auto-fit occlusal plane when occlusal landmarks change
-  if(['U6','L6','U4','L4'].includes(id)) fitOccPlane();
+  if(['U6','L6','U4','L4','L1tip'].includes(id)) fitOccPlane();
 }
 
 // Fit occPlane through occlusal landmarks.
 // Posterior point = average of molar tips (U6, L6)
-// Anterior point  = average of premolar tips (U4, L4)
-// Only fires when at least one posterior AND one anterior point is placed.
+// Anterior point  = L1tip (lower incisor tip), fallback to premolar average
+// Only fires when at least one posterior point is placed.
 // Skips if the user has manually dragged the plane (occPlaneManual flag).
 let occPlaneManual = false;
 
 function fitOccPlane(){
-  if(occPlaneManual) return; // user took manual control — don't override
+  if(occPlaneManual) return;
   const p = pts;
-  // Posterior: average available molar tips in normalised coords
+
+  // Posterior: average available molar tips
   const postPts = [p.U6, p.L6].filter(Boolean);
-  const antPts  = [p.U4, p.L4].filter(Boolean);
-  if(postPts.length === 0 || antPts.length === 0) return;
+  if(postPts.length === 0) return;
+
   const post = {
     x: postPts.reduce((s,pt)=>s+pt.x,0)/postPts.length,
     y: postPts.reduce((s,pt)=>s+pt.y,0)/postPts.length
   };
-  const ant = {
-    x: antPts.reduce((s,pt)=>s+pt.x,0)/antPts.length,
-    y: antPts.reduce((s,pt)=>s+pt.y,0)/antPts.length
-  };
+
+  // Anterior: prefer L1tip, fallback to premolar average
+  let ant = null;
+  if(p.L1tip){
+    ant = {x: p.L1tip.x, y: p.L1tip.y};
+  } else {
+    const antPts = [p.U4, p.L4].filter(Boolean);
+    if(antPts.length === 0) return;
+    ant = {
+      x: antPts.reduce((s,pt)=>s+pt.x,0)/antPts.length,
+      y: antPts.reduce((s,pt)=>s+pt.y,0)/antPts.length
+    };
+  }
+
   occPlane = {p1: post, p2: ant};
   drawImg(); renderOvl();
 }
