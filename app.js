@@ -2143,7 +2143,8 @@ setInterval(function(){ fetch('https://mujtaba1212-ceph-landmark-detector.hf.spa
     'Or':'Or','Pog':'Pog','PNS':'PNS','S':'S','Ar':'Ar',
     'Go':'Go','Gn':'Gn','Co':'Co','Po':'Po','Pn':'Prn',
     'UIT':'U1tip','UIA':'U1ap','LIT':'L1tip','LIA':'L1ap',
-    'Sn':'Sn','Ls':'Ls','Li':'Li'
+    'Sn':'Sn','Ls':'Ls','Li':'Li',
+    'UPM':'U4','UMT':'U6','LPM':'L4','LMT':'L6'
   };
 
   document.getElementById('ai-detect-btn').addEventListener('click', function(){
@@ -2154,7 +2155,7 @@ setInterval(function(){ fetch('https://mujtaba1212-ceph-landmark-detector.hf.spa
     var prog    = document.getElementById('ai-prog');
     var pct     = document.getElementById('ai-pct');
     var chipsEl = document.getElementById('ai-chips');
-    var lmNames = ['S','N','Or','Po','Ar','Co','A','ANS','PNS','B','Me','Pog','Gn','Go','Prn','Sn','Ls','Li',"Pog'",'U1tip','U1ap','L1tip','L1ap'];
+    var lmNames = ['S','N','Or','Po','Ar','Co','A','ANS','PNS','B','Me','Pog','Gn','Go','Prn','Sn','Ls','Li',"Pog'",'U1tip','U1ap','L1tip','L1ap','U4','U6','L4','L6'];
     var msgs    = ['Initialising model…','Preprocessing image…','Detecting cranial base…','Mapping skeletal points…','Locating dental landmarks…','Tracing soft tissue…','Placing landmarks…'];
     overlay.style.display = 'flex';
     chipsEl.innerHTML = '';
