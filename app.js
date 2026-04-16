@@ -925,14 +925,14 @@ function renderOvl(){
       opacity:0.75,'stroke-dasharray':'6,3','pointer-events':'none'
     }));
 
-    // Endpoint handle p1 (at actual landmark position)
-    const h1=mkEl('circle',{cx:c1.x,cy:c1.y,r:6,
+    // Endpoint handle p1 (at extended end — molar side)
+    const h1=mkEl('circle',{cx:e1.x,cy:e1.y,r:6,
       fill:'rgba(232,192,108,.25)',stroke:'#e8c06c','stroke-width':1.5,cursor:'grab',opacity:.9});
     h1.addEventListener('mousedown',e=>{e.stopPropagation();draggingOcc='p1';svg.style.cursor='grabbing';});
     svg.appendChild(h1);
 
-    // Endpoint handle p2 (at actual landmark position)
-    const h2=mkEl('circle',{cx:c2.x,cy:c2.y,r:6,
+    // Endpoint handle p2 (at extended end — incisor side)
+    const h2=mkEl('circle',{cx:e2.x,cy:e2.y,r:6,
       fill:'rgba(232,192,108,.25)',stroke:'#e8c06c','stroke-width':1.5,cursor:'grab',opacity:.9});
     h2.addEventListener('mousedown',e=>{e.stopPropagation();draggingOcc='p2';svg.style.cursor='grabbing';});
     svg.appendChild(h2);
