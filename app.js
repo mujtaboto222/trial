@@ -2383,5 +2383,3 @@ setInterval(function(){ fetch('https://mujtaba1212-ceph-landmark-detector.hf.spa
     btn.title = light ? 'Switch to dark mode' : 'Switch to light mode';
   });
 })();
-
-</script>
