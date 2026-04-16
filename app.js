@@ -1466,14 +1466,13 @@ document.getElementById('analyse-btn').addEventListener('click',()=>{
       {c:'sl', l:v<mean-2*sd?'↓↓ Low':'↓ Low'};
 
     const st = hasValue ? classify(val, m.norm[0], m.norm[1]) : null;
-    const col = !st ? 'muted' : st.c==='sn'?'sn':st.c==='sh'?'sh':'sl';
 
     const row = document.createElement('div');
     row.className = 'm-row m-row-anim';
     row.style.animationDelay = (rowIndex * 40) + 'ms';
     rowIndex++;
     row.innerHTML = `
-      <div class="m-name">${m.n}<small>${m.d}</small></div><div><div class="m-val ${col}">${hasValue ? val.toFixed(1)+m.u : '–'}</div><div class="m-norm">${m.norm[0]}${m.u} ±${m.norm[1]}</div></div>
+      <div class="m-name">${m.n}<small>${m.d}</small></div><div><div class="m-val">${hasValue ? val.toFixed(1)+m.u : '–'}</div><div class="m-norm">${m.norm[0]}${m.u} ±${m.norm[1]}</div></div>
       ${!hasValue
         ? `<span class="m-status m-na">N/A</span>`
         : `<span class="m-status ${st.c}">${st.l}</span>`}`;
