@@ -9,6 +9,8 @@ const LM = [
    hint:'Uppermost point of the external auditory meatus (top of the ear canal opening).'},
   {id:'Ar',  abbr:'Ar',  name:'Articulare',          group:'Cranial Base',
    hint:'Intersection of the posterior ramus border with the inferior cranial base surface.'},
+  {id:'Ba',  abbr:'Ba',  name:'Basion',              group:'Cranial Base',
+   hint:'Most anterior-inferior point of the foramen magnum — the lowest point of the occipital bone at the skull base.'},
   {id:'ANS', abbr:'ANS', name:'Ant. Nasal Spine',    group:'Maxilla',
    hint:'Tip of the anterior nasal spine — the sharp bony point at the base of the nasal aperture, projecting forward.'},
   {id:'PNS', abbr:'PNS', name:'Post. Nasal Spine',   group:'Maxilla',
@@ -35,6 +37,15 @@ const LM = [
    hint:'Most posterior-inferior point at the mandibular angle — constructed by bisecting the ramus-body angle.'},
   {id:'Co',  abbr:'Co',  name:'Condylion',           group:'Mandible',
    hint:'Most superior-posterior point on the mandibular condyle — top of the condylar head.'},
+  // Occlusal landmarks — used to auto-fit the functional occlusal plane
+  {id:'U6',  abbr:'U6',  name:'Upper Molar (cusp tip)',  group:'Occlusal',
+   hint:'Mesiobuccal cusp tip of the upper first molar. Used with L6, U4, L4 to define the functional occlusal plane.'},
+  {id:'L6',  abbr:'L6',  name:'Lower Molar (cusp tip)',  group:'Occlusal',
+   hint:'Mesiobuccal cusp tip of the lower first molar. Used with U6, U4, L4 to define the functional occlusal plane.'},
+  {id:'U4',  abbr:'U4',  name:'Upper Premolar (cusp tip)',group:'Occlusal',
+   hint:'Cusp tip of the upper first premolar. Used with U6, L6, L4 to define the functional occlusal plane.'},
+  {id:'L4',  abbr:'L4',  name:'Lower Premolar (cusp tip)',group:'Occlusal',
+   hint:'Cusp tip of the lower first premolar. Used with U6, L6, U4 to define the functional occlusal plane.'},
   {id:'Sn',  abbr:'Sn',  name:'Subnasale',           group:'Soft Tissue',
    hint:'Junction of the columella base and the upper lip — base of the nose, not the nose tip.'},
   {id:'Prn', abbr:'Prn', name:'Pronasale',           group:'Soft Tissue',
@@ -47,7 +58,7 @@ const LM = [
    hint:"Most anterior point of the soft tissue chin overlying bony Pogonion."},
 ];
 
-const COLORS={'Cranial Base':'#58a6ff','Maxilla':'#3fb950','Mandible':'#f0883e','Soft Tissue':'#bc8cff'};
+const COLORS={'Cranial Base':'#58a6ff','Maxilla':'#3fb950','Mandible':'#f0883e','Occlusal':'#e8c06c','Soft Tissue':'#bc8cff'};
 const getCol=id=>COLORS[LM.find(l=>l.id===id)?.group]||'#fff';
 
 
@@ -590,6 +601,7 @@ let mouseCanvasX=0,mouseCanvasY=0;
 // ── BUILD LIST ──
 function buildList(){
   const list=document.getElementById('lm-list');
+  list.innerHTML=''; // clear on reload
   let cur='';
   LM.forEach(lm=>{
     if(lm.group!==cur){cur=lm.group;const s=document.createElement('div');s.className='lm-sep';s.textContent=cur;list.appendChild(s);}
@@ -598,6 +610,9 @@ function buildList(){
     item.addEventListener('click',()=>setActive(lm.id));
     list.appendChild(item);
   });
+  // Set dynamic total
+  const tot=document.getElementById('prog-total');
+  if(tot) tot.textContent=LM.length;
 }
 
 function setActive(id){
@@ -624,13 +639,41 @@ function updateHdrHint(){
 function markPlaced(id){
   document.getElementById('lmi-'+id)?.classList.add('placed');
   updateProg();updateHdrHint();
+  // Auto-fit occlusal plane when occlusal landmarks change
+  if(['U6','L6','U4','L4'].includes(id)) fitOccPlane();
+}
+
+// Fit occPlane through occlusal landmarks.
+// Posterior point = average of molar tips (U6, L6)
+// Anterior point  = average of premolar tips (U4, L4)
+// Only fires when at least one posterior AND one anterior point is placed.
+// Skips if the user has manually dragged the plane (occPlaneManual flag).
+let occPlaneManual = false;
+
+function fitOccPlane(){
+  if(occPlaneManual) return; // user took manual control — don't override
+  const p = pts;
+  // Posterior: average available molar tips in normalised coords
+  const postPts = [p.U6, p.L6].filter(Boolean);
+  const antPts  = [p.U4, p.L4].filter(Boolean);
+  if(postPts.length === 0 || antPts.length === 0) return;
+  const post = {
+    x: postPts.reduce((s,pt)=>s+pt.x,0)/postPts.length,
+    y: postPts.reduce((s,pt)=>s+pt.y,0)/postPts.length
+  };
+  const ant = {
+    x: antPts.reduce((s,pt)=>s+pt.x,0)/antPts.length,
+    y: antPts.reduce((s,pt)=>s+pt.y,0)/antPts.length
+  };
+  occPlane = {p1: post, p2: ant};
+  drawImg(); renderOvl();
 }
 
 function updateProg(){
   const n=Object.keys(pts).length;
+  const total=LM.length;
   document.getElementById('prog-count').textContent=n;
-  var pr=document.getElementById('prog-remain'); if(pr) pr.textContent=(24-n)+' remaining';
-  document.getElementById('prog-fill').style.width=(n/24*100)+'%';
+  document.getElementById('prog-fill').style.width=(n/total*100)+'%';
   document.getElementById('analyse-btn').disabled=!imgEl;
 }
 
@@ -640,7 +683,7 @@ const dropZ=document.getElementById('drop-zone'),upIn=document.getElementById('u
 dropZ.addEventListener('click',()=>upIn.click());
 upIn.addEventListener('change',e=>{
   if(e.target.files[0]){
-    pts={}; activeLm=null; occPlane=null;
+    pts={}; activeLm=null; occPlane=null; occPlaneManual=false;
     snapHistory=[]; snapIdx=-1;
     buildList(); updateProg(); renderOvl();
     loadImg(e.target.files[0]);
@@ -651,7 +694,7 @@ dropZ.addEventListener('dragleave',()=>dropZ.classList.remove('over'));
 dropZ.addEventListener('drop',e=>{
   e.preventDefault(); dropZ.classList.remove('over');
   if(e.dataTransfer.files[0]){
-    pts={}; activeLm=null; occPlane=null;
+    pts={}; activeLm=null; occPlane=null; occPlaneManual=false;
     snapHistory=[]; snapIdx=-1;
     buildList(); updateProg(); renderOvl();
     loadImg(e.dataTransfer.files[0]);
@@ -939,6 +982,10 @@ function drawLines(){
   ln('Co','A',  '#a0d0ff',1,[3,4]);      // effective maxillary length
   ln('Co','Gn', '#ffd0a0',1,[3,4]);      // effective mandibular length
   ln('PNS','Gn','#d0ffd0',1,[3,4]);      // facial axis (PNS-Gn)
+
+  // ── Occlusal contacts (dotted, gold) ──────────
+  ln('U6','L6', '#e8c06c',1,[3,3]);      // molar contact
+  ln('U4','L4', '#e8c06c',1,[3,3]);      // premolar contact
 }
 
 
@@ -1041,7 +1088,7 @@ window.addEventListener('mousemove',e=>{
 window.addEventListener('mouseup',e=>{
   if(_lastPointerType !== 'mouse') return;
   if(dragging){ snapState(); dragging=null; svg.style.cursor='crosshair'; }
-  if(draggingOcc){ snapState(); draggingOcc=null; svg.style.cursor='crosshair'; }
+  if(draggingOcc){ snapState(); draggingOcc=null; svg.style.cursor='crosshair'; occPlaneManual=true; }
   if(isPanning){
     svg.style.cursor='crosshair';
     if(!_panMoved && e.button===0 && !e.altKey){
@@ -1194,9 +1241,10 @@ document.getElementById('mag-btn').addEventListener('click',function(){
 document.getElementById('clear-btn').addEventListener('click',()=>{
   if(!confirm('Clear all landmarks?'))return;
   pts={};
+  occPlane=null; occPlaneManual=false;
   document.querySelectorAll('.lm-item').forEach(e=>e.classList.remove('placed'));
   updateProg();updateHdrHint();
-  document.getElementById('results-body').innerHTML='<div class="res-placeholder">Place all 24 landmarks, then click <strong>▶ Analyse</strong>.</div>';
+  document.getElementById('results-body').innerHTML='<div class="res-placeholder">Place all landmarks, then click <strong>▶ Analyse</strong>.</div>';
   drawImg();renderOvl();
 });
 
@@ -1663,6 +1711,10 @@ document.getElementById('export-btn').addEventListener('click', async () => {
       drawLine('Co','Gn', '#ffd0a0',1,[3,4]);
       drawLine('PNS','Gn','#d0ffd0',1,[3,4]);
 
+      // Occlusal contacts
+      drawLine('U6','L6', '#e8c06c',1,[3,3]);
+      drawLine('U4','L4', '#e8c06c',1,[3,3]);
+
       oc.setLineDash([]); // reset
     }
 
@@ -1998,7 +2050,7 @@ document.getElementById('export-btn').addEventListener('click', async () => {
     }
 
     if(_drag){ snapState(); _drag=null; return; }
-    if(_dragOcc){ snapState(); _dragOcc=null; return; }
+    if(_dragOcc){ snapState(); _dragOcc=null; occPlaneManual=true; return; }
 
     // Tap = place ONE landmark exactly at this position
     if(_pan && !_moved && !_placed && activeLm && !calibrating){
