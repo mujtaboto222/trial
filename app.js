@@ -910,20 +910,28 @@ function renderOvl(){
     const c1 = toC(occPlane.p1.x, occPlane.p1.y);
     const c2 = toC(occPlane.p2.x, occPlane.p2.y);
 
-    // The line
+    // Extend line beyond both handles by 60px
+    const dx = c2.x - c1.x, dy = c2.y - c1.y;
+    const len = Math.sqrt(dx*dx + dy*dy) || 1;
+    const ux = dx/len, uy = dy/len;
+    const ext = 60;
+    const e1 = {x: c1.x - ux*ext, y: c1.y - uy*ext}; // extend past molar side
+    const e2 = {x: c2.x + ux*ext, y: c2.y + uy*ext}; // extend past incisor side
+
+    // The extended line
     svg.appendChild(mkEl('line',{
-      x1:c1.x,y1:c1.y,x2:c2.x,y2:c2.y,
+      x1:e1.x,y1:e1.y,x2:e2.x,y2:e2.y,
       stroke:'#e8c06c','stroke-width':1.8,
       opacity:0.75,'stroke-dasharray':'6,3','pointer-events':'none'
     }));
 
-    // Endpoint handle p1
+    // Endpoint handle p1 (at actual landmark position)
     const h1=mkEl('circle',{cx:c1.x,cy:c1.y,r:6,
       fill:'rgba(232,192,108,.25)',stroke:'#e8c06c','stroke-width':1.5,cursor:'grab',opacity:.9});
     h1.addEventListener('mousedown',e=>{e.stopPropagation();draggingOcc='p1';svg.style.cursor='grabbing';});
     svg.appendChild(h1);
 
-    // Endpoint handle p2
+    // Endpoint handle p2 (at actual landmark position)
     const h2=mkEl('circle',{cx:c2.x,cy:c2.y,r:6,
       fill:'rgba(232,192,108,.25)',stroke:'#e8c06c','stroke-width':1.5,cursor:'grab',opacity:.9});
     h2.addEventListener('mousedown',e=>{e.stopPropagation();draggingOcc='p2';svg.style.cursor='grabbing';});
@@ -1733,9 +1741,13 @@ document.getElementById('export-btn').addEventListener('click', async () => {
     if(occPlane){
       const occ1 = {x: occPlane.p1.x * REPORT_W, y: occPlane.p1.y * REPORT_H};
       const occ2 = {x: occPlane.p2.x * REPORT_W, y: occPlane.p2.y * REPORT_H};
+      const odx = occ2.x-occ1.x, ody = occ2.y-occ1.y;
+      const olen = Math.sqrt(odx*odx+ody*ody)||1;
+      const oext = 40; // extend 40px each side in report space
+      const ouxo = odx/olen, ouyo = ody/olen;
       oc.beginPath();
-      oc.moveTo(occ1.x, occ1.y);
-      oc.lineTo(occ2.x, occ2.y);
+      oc.moveTo(occ1.x - ouxo*oext, occ1.y - ouyo*oext);
+      oc.lineTo(occ2.x + ouxo*oext, occ2.y + ouyo*oext);
       oc.strokeStyle = '#e8c06c';
       oc.lineWidth = 1.8;
       oc.globalAlpha = 0.75;
