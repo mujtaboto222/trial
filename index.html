@@ -1,0 +1,99 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>OrthoTimes QuickCephTool</title><link rel="stylesheet" href="style.css"><script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230a0a0a'/%3E%3Crect width='32' height='32' rx='7' fill='none' stroke='%233bb8f0' stroke-width='1.5'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-family='Inter,sans-serif' font-weight='800' font-size='14' fill='%233bb8f0'%3EQC%3C/text%3E%3C/svg%3E"><script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script></head><body><header><h1><span>OrthoTimes</span><em>QuickCephTool</em></h1><span class="chip chip-beta">BETA</span><div class="mode-wrap" id="mode-wrap"><span id="mode-chip">Eastman Analysis</span><div id="mode-menu"><div class="mode-item active" data-mode="full"><span class="mode-dot"></span>Eastman Analysis</div><div class="mode-item" data-mode="mcnamara"><span class="mode-dot"></span>McNamara Analysis</div><div class="mode-item" data-mode="downs"><span class="mode-dot"></span>Downs Analysis</div><div class="mode-item" data-mode="steiner"><span class="mode-dot"></span>Steiner Analysis</div><div class="mode-item" data-mode="key"><span class="mode-dot"></span>Key Measurements</div></div></div><button id="theme-toggle" title="Switch to light mode"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button><span class="hdr-right" id="hdr-hint">⟵ Adjust occlusal plane by dragging its endpoints on the image</span><button id="new-upload-btn" onclick="document.getElementById('upload-input').click()" title="Upload new image">
+  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+  New lateral ceph
+</button><div id="patient-panel"><label>Patient</label><input id="patient-name" type="text" placeholder="Enter name..." maxlength="60" autocomplete="off" spellcheck="false"></div></header><div class="main"><!-- Left --><div class="panel-left"><div class="pl-scroll"><div class="ai-badge-wrap" id="ai-detect-btn" title="Auto-detect all landmarks using AI"><div class="ai-badge"><span class="ai-badge-dot"></span>AI Auto-Detect <span class="ai-badge-soon ai-badge-soon-lit">NEW</span></div></div><div class="pl-head">Landmarks <span class="pl-head-sub">(click to select · click image to place)</span></div><!-- hint box --><div class="hint-box" id="hint-box"><span class="hint-title" id="hint-title"></span><span id="hint-text"></span></div><div id="lm-list"></div></div><div class="pl-footer"><div class="prog-bar"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div><div class="prog-text"><span id="prog-count">0</span>/23 placed</div></div></div><!-- Canvas --><div class="canvas-wrap" id="canvas-wrap"><div id="drop-zone"><svg width="110" height="110" viewBox="0 0 110 110" fill="none" xmlns="http://www.w3.org/2000/svg"><style>.dz-ring-track{fill:none;stroke:rgba(59,184,240,0.12);stroke-width:3}.dz-ring-spin{fill:none;stroke:#3bb8f0;stroke-width:3;stroke-linecap:round;stroke-dasharray:88 200;animation:dz-rotate 2.4s linear infinite;transform-origin:55px 55px}@keyframes dz-rotate{to{transform:rotate(360deg)}}.dz-float{animation:dz-bob 3s ease-in-out infinite;transform-origin:55px 55px}@keyframes dz-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}.dz-arrow-line{stroke:#3bb8f0;stroke-width:2.5;stroke-linecap:round;fill:none;stroke-dasharray:28;stroke-dashoffset:28;animation:dz-draw 1.8s ease-in-out infinite}@keyframes dz-draw{0%{stroke-dashoffset:28;opacity:0}20%{opacity:1}60%{stroke-dashoffset:0}100%{stroke-dashoffset:0;opacity:1}}.dz-arrow-head{fill:#3bb8f0;opacity:0;animation:dz-head 1.8s ease-in-out infinite}@keyframes dz-head{0%,25%{opacity:0;transform:translateY(6px)}50%{opacity:1;transform:translateY(0)}100%{opacity:1;transform:translateY(0)}}.dz-dot{fill:#3bb8f0;animation:dz-dot-seq 1.8s ease-in-out infinite}.dz-d2{animation-delay:.2s}.dz-d3{animation-delay:.4s}@keyframes dz-dot-seq{0%,100%{opacity:.15}50%{opacity:.8}}</style><g class="dz-float"><circle cx="55" cy="55" r="42" class="dz-ring-track"/><circle cx="55" cy="55" r="42" class="dz-ring-spin"/><circle cx="55" cy="55" r="32" fill="rgba(59,184,240,0.08)"/><g class="dz-arrow-head" style="transform-origin:55px 38px"><polygon points="55,32 41,48 69,48" fill="#3bb8f0"/></g><line x1="55" y1="48" x2="55" y2="74" class="dz-arrow-line"/><line x1="40" y1="76" x2="70" y2="76" stroke="#3bb8f0" stroke-width="2.5" stroke-linecap="round" opacity="0.45"/></g><circle class="dz-dot" cx="42" cy="104" r="3"/><circle class="dz-dot dz-d2" cx="55" cy="104" r="3"/><circle class="dz-dot dz-d3" cx="68" cy="104" r="3"/></svg><div class="dz-label">Upload lateral cephalogram</div><div class="dz-hint">Click or drag &amp; drop · JPG / PNG / WEBP</div><input type="file" id="upload-input" accept="image/*"></div><div id="canvas-container"><canvas id="img-canvas"></canvas><canvas id="grid-canvas"></canvas><svg id="overlay-svg" xmlns="http://www.w3.org/2000/svg"></svg><!-- custom crosshair cursor --><svg id="cursor-svg" width="24" height="24" viewBox="0 0 24 24"><line x1="12" y1="2" x2="12" y2="8" stroke="#fff" stroke-width="1.5" opacity=".9"/><line x1="12" y1="16" x2="12" y2="22" stroke="#fff" stroke-width="1.5" opacity=".9"/><line x1="2" y1="12" x2="8" y2="12" stroke="#fff" stroke-width="1.5" opacity=".9"/><line x1="16" y1="12" x2="22" y2="12" stroke="#fff" stroke-width="1.5" opacity=".9"/><circle cx="12" cy="12" r="3" fill="none" stroke="#fff" stroke-width="1.5" opacity=".9"/><circle cx="12" cy="12" r="1" fill="#fff" opacity=".9"/></svg></div><!-- Calibration overlay banner --><div id="calib-banner"><strong id="calib-step">Click point 1</strong> &nbsp;of a known distance on the image</div><!-- AI detection overlay -->
+<div id="ai-overlay">
+  <div id="ai-glow"></div>
+  <div id="ai-ring-wrap">
+    <div id="ai-ring-bg"></div>
+    <canvas id="ai-ring-canvas" width="90" height="90"></canvas>
+    <div id="ai-qc-label">QC</div>
+  </div>
+  <div id="ai-status-box">
+    <div id="ai-status-row">
+      <span id="ai-status-label">Detecting Landmarks</span>
+      <span id="ai-pct">0%</span>
+    </div>
+    <div id="ai-prog-track"><div id="ai-prog"></div></div>
+    <div id="ai-status">Initialising model…</div>
+  </div>
+  <div id="ai-chips"></div>
+</div><!-- Magnifier --><div id="magnifier"><canvas id="mag-canvas" width="160" height="160"></canvas><svg id="mag-crosshair" width="14" height="14" viewBox="0 0 14 14"><line x1="7" y1="0" x2="7" y2="14" stroke="rgba(255,80,80,.9)" stroke-width="1"/><line x1="0" y1="7" x2="14" y2="7" stroke="rgba(255,80,80,.9)" stroke-width="1"/><circle cx="7" cy="7" r="2.5" fill="none" stroke="rgba(255,80,80,.9)" stroke-width="1"/></svg><div id="mag-resize"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="3" y1="10" x2="10" y2="3"/><line x1="6" y1="10" x2="10" y2="6"/></svg></div></div><div class="toolbar" id="toolbar" style="display:none;"><button class="tb" id="zoom-in">＋</button><button class="tb" id="zoom-out">－</button><button class="tb" id="fit-btn">Fit</button><span class="zoom-lbl" id="zoom-lbl">100%</span><button class="tb" id="adj-btn" title="Adjust image brightness & contrast">☀ Adjust</button><button class="tb" id="lines-btn">Lines ON</button><button class="tb" id="grid-btn">⊞ Grid OFF</button><button class="tb" id="mag-btn" title="Toggle magnifier"><svg class="tb-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg>Magnifier ON</button><button class="tb" id="calib-btn" title="Click two points of known distance to calibrate mm scale">Calibrate</button><button class="tb" id="clear-btn">Clear</button><button class="tb primary" id="analyse-btn" disabled>Analyse</button></div>
+<!-- Image adjustment popup -->
+<div id="img-adj-popup">
+  <div class="adj-row"><span class="adj-lbl">Brightness</span><input class="adj-slider" id="adj-brightness" type="range" min="-100" max="100" value="0"><span class="adj-val" id="adj-brightness-val">0</span></div>
+  <div class="adj-row"><span class="adj-lbl">Contrast</span><input class="adj-slider" id="adj-contrast" type="range" min="-100" max="100" value="0"><span class="adj-val" id="adj-contrast-val">0</span></div>
+  <div class="adj-row"><span class="adj-lbl">Invert</span><input type="checkbox" id="adj-invert" class="adj-check"><span class="adj-check-lbl">B/W negative</span></div>
+  <span class="adj-reset" id="adj-reset">Reset</span>
+</div><div class="pt-tip" id="pt-tip"></div></div><!-- Right --><div class="panel-right"><div class="res-header"><h2>Analysis Results</h2><p>hover points to see names</p><button id="export-btn" style="display:none;">⬇ Export PDF Report</button></div><div id="results-body"><div class="res-placeholder">Place all 24 landmarks,<br>then click <strong>▶ Analyse</strong>.<br><br><span class="res-placeholder-hint">Use the magnifier for precision.<br>Drag any placed point to adjust.</span></div></div></div></div><script src="app.js" defer></script>
+
+<!-- ── Feedback button ── -->
+<button id="fb-btn" onclick="document.getElementById('fb-panel').classList.toggle('open')">
+  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  Feedback
+</button>
+
+<!-- ── Feedback panel ── -->
+<div id="fb-panel">
+  <h3>Share your feedback</h3>
+  <p>Help us improve QuickCephTool</p>
+  <input id="fb-name" class="fb-input" type="text" placeholder="Your name">
+  <input id="fb-email" class="fb-input" type="email" placeholder="Your email">
+  <textarea id="fb-msg" class="fb-input" placeholder="Your feedback..."></textarea>
+  <button id="fb-send" onclick="sendFeedback()">Send Feedback</button>
+  <div id="fb-thanks">Thank you for your feedback! ✓</div>
+</div>
+
+<script>
+  // ── EmailJS setup ──────────────────────────────
+  // Replace these with your EmailJS credentials
+  var EMAILJS_PUBLIC_KEY  = 'A-yXWpdXl9y7kPwxY';
+  var EMAILJS_SERVICE_ID  = 'service_wv47k7u';
+  var EMAILJS_TEMPLATE_ID = 'template_acnk5lk';
+
+  emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+
+  function sendFeedback(){
+    var name  = document.getElementById('fb-name').value.trim();
+    var email = document.getElementById('fb-email').value.trim();
+    var msg   = document.getElementById('fb-msg').value.trim();
+    if(!msg){ alert('Please write your feedback first.'); return; }
+    var btn = document.getElementById('fb-send');
+    btn.textContent = 'Sending...';
+    btn.disabled = true;
+    emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      name:    name  || 'Anonymous',
+      email:   email || 'Not provided',
+      message: msg,
+      title:   'App Feedback'
+    }).then(function(){
+      btn.style.display = 'none';
+      document.getElementById('fb-thanks').style.display = 'block';
+      setTimeout(function(){
+        document.getElementById('fb-panel').classList.remove('open');
+        btn.style.display = 'block';
+        btn.textContent = 'Send Feedback';
+        btn.disabled = false;
+        document.getElementById('fb-name').value  = '';
+        document.getElementById('fb-email').value = '';
+        document.getElementById('fb-msg').value   = '';
+        document.getElementById('fb-thanks').style.display = 'none';
+      }, 2500);
+    }, function(err){
+      btn.textContent = 'Send Feedback';
+      btn.disabled = false;
+      alert('Failed to send. Please try again.');
+    });
+  }
+
+  // Close panel when clicking outside
+  document.addEventListener('click', function(e){
+    var panel = document.getElementById('fb-panel');
+    var btn   = document.getElementById('fb-btn');
+    if(panel.classList.contains('open') && !panel.contains(e.target) && e.target !== btn && !btn.contains(e.target)){
+      panel.classList.remove('open');
+    }
+  });
+</script>
+</body></html>
