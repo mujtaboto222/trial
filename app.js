@@ -700,7 +700,7 @@ function loadImg(file){
 // ── CANVAS ──
 const ic=document.getElementById('img-canvas'),ctx=ic.getContext('2d');
 const svg=document.getElementById('overlay-svg');
-const wrap=document.getElementById('canvas-wrap');
+const wrap=document.getElementById('panel-img');
 const mag=document.getElementById('magnifier');
 const magCtx=document.getElementById('mag-canvas').getContext('2d');
 
@@ -1481,6 +1481,19 @@ document.getElementById('analyse-btn').addEventListener('click',()=>{
 
   // Show export button now that results exist
   document.getElementById('export-btn').style.display = 'block';
+
+  // On mobile: show toast to switch to results tab
+  if(window.innerWidth <= 1024){
+    var old = document.getElementById('_toast');
+    if(old) old.remove();
+    var toast = document.createElement('div');
+    toast.id = '_toast';
+    toast.className = 'tab-toast';
+    toast.textContent = 'Analysis done — tap to view Results';
+    toast.onclick = function(){ switchTab('res'); toast.remove(); };
+    document.body.appendChild(toast);
+    setTimeout(function(){ if(toast.parentNode) toast.remove(); }, 5000);
+  }
 
   // Fade results back in
   body.style.opacity = '0';
@@ -2306,7 +2319,7 @@ setInterval(function(){ fetch('https://mujtaba1212-ceph-landmark-detector.hf.spa
 
   document.addEventListener('mousemove', function(e){
     if(!_dragging) return;
-    var wrap = document.getElementById('canvas-wrap');
+    var wrap = document.getElementById('panel-img');
     var wr   = wrap.getBoundingClientRect();
     var s    = parseInt(magEl.style.width) || 160;
     var nx   = Math.max(0, Math.min(e.clientX - wr.left - _dx, wr.width  - s));
@@ -2351,7 +2364,7 @@ setInterval(function(){ fetch('https://mujtaba1212-ceph-landmark-detector.hf.spa
   },{passive:true});
   document.addEventListener('touchmove', function(e){
     if(!_tDragging) return;
-    var t=e.touches[0], wrap=document.getElementById('canvas-wrap');
+    var t=e.touches[0], wrap=document.getElementById('panel-img');
     var wr=wrap.getBoundingClientRect(), s=parseInt(magEl.style.width)||160;
     var nx=Math.max(0,Math.min(t.clientX-wr.left-_tdx, wr.width-s));
     var ny=Math.max(0,Math.min(t.clientY-wr.top-_tdy,  wr.height-s));
@@ -2382,3 +2395,37 @@ setInterval(function(){ fetch('https://mujtaba1212-ceph-landmark-detector.hf.spa
     btn.title = light ? 'Switch to dark mode' : 'Switch to light mode';
   });
 })();
+
+// ── TAB SWITCHER (tablet/phone ≤1024px) ──
+var _activeTab = 'lm';
+
+function switchTab(t){
+  _activeTab = t;
+  var panels = {
+    lm:  document.getElementById('panel-lm'),
+    img: document.getElementById('panel-img'),
+    res: document.getElementById('panel-res')
+  };
+  var btns = {
+    lm:  document.getElementById('tab-lm'),
+    img: document.getElementById('tab-img'),
+    res: document.getElementById('tab-res')
+  };
+  Object.keys(panels).forEach(function(k){
+    panels[k].classList.toggle('tab-active', k === t);
+    btns[k].classList.toggle('active', k === t);
+  });
+  // Re-init canvas when switching to image tab
+  if(t === 'img') setTimeout(function(){ initCanvas(); drawImg(); renderOvl(); }, 40);
+}
+
+window.addEventListener('load', function(){
+  if(window.innerWidth <= 1024) switchTab('lm');
+});
+
+window.addEventListener('resize', function(){
+  if(window.innerWidth <= 1024){
+    switchTab(_activeTab);
+    if(imgEl){ resize(); fitImg(); drawImg(); renderOvl(); }
+  }
+});
