@@ -122,11 +122,11 @@
   .res-header p{font-size:.6rem;color:var(--muted);margin-top:2px;}
   .res-placeholder{padding:22px 15px;text-align:center;color:var(--muted);font-size:.68rem;line-height:1.8;}
   .sec-lbl{font-size:.58rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--border);padding:14px 15px 4px;}
-  .m-row{padding:6px 12px;border-bottom:1px solid rgba(255,255,255,.04);display:grid;grid-template-columns:1fr auto auto;gap:5px;align-items:center;font-size:.65rem;}
+  .m-row{padding:6px 12px;border-bottom:1px solid rgba(255,255,255,.03);display:grid;grid-template-columns:1fr auto auto;gap:5px;align-items:center;font-size:.65rem;}
   .m-row:hover{background:var(--s2);}
   .m-name{color:var(--text);font-size:.7rem;line-height:1.3;}
   .m-name small{display:block;color:var(--muted);font-size:.56rem;}
-  .m-val{font-weight:700;text-align:right;min-width:42px;}
+  .m-val{font-weight:500;text-align:right;min-width:42px;color:#888;}
   .m-status{font-size:.56rem;padding:1px 5px;border-radius:4px;text-align:center;min-width:48px;font-weight:600;}
   .sn{color:var(--accent);}
   .sh{color:var(--warn);}
@@ -333,10 +333,7 @@
   .scale-ok{background:rgba(63,185,80,.07);border:1px solid rgba(63,185,80,.25);color:var(--accent);}
   .scale-warn{background:rgba(240,136,62,.08);border:1px solid rgba(240,136,62,.25);color:var(--warn);}
 
-  /* ── m-val color variants ── */
-  .m-val.sn{color:var(--accent);}
-  .m-val.sh{color:var(--warn);}
-  .m-val.sl{color:var(--accent);}
+  /* ── m-val color variants — value is always grey, status badge is colored ── */
   .m-val.muted{color:var(--muted);}
 
   /* ── m-status N/A ── */
