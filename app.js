@@ -9,8 +9,6 @@ const LM = [
    hint:'Uppermost point of the external auditory meatus (top of the ear canal opening).'},
   {id:'Ar',  abbr:'Ar',  name:'Articulare',          group:'Cranial Base',
    hint:'Intersection of the posterior ramus border with the inferior cranial base surface.'},
-  {id:'Ba',  abbr:'Ba',  name:'Basion',              group:'Cranial Base',
-   hint:'Most anterior-inferior point of the foramen magnum — the lowest point of the occipital bone at the skull base.'},
   {id:'ANS', abbr:'ANS', name:'Ant. Nasal Spine',    group:'Maxilla',
    hint:'Tip of the anterior nasal spine — the sharp bony point at the base of the nasal aperture, projecting forward.'},
   {id:'PNS', abbr:'PNS', name:'Post. Nasal Spine',   group:'Maxilla',
@@ -253,13 +251,6 @@ function mmDiff(p){ return mandEffLen(p) - maxEffLen(p); }
 // Mandibular plane angle (McNamara): FH to mandibular plane (Go-Me)
 function mpAngMcN(p){ return lineAng([p.Po,p.Or],[p.Go,p.Me]); }
 
-// Facial axis angle (McNamara): angle between N-Ba line and Pt-Gn line
-// Pt (pterygoid point) is not in our landmark set — use PNS as approximation
-// Norm: 90° ±3
-function facialAxis(p){
-  return lineAng([p.Ba,p.N],[p.PNS,p.Gn]);
-}
-
 // Overjet: horizontal distance from U1tip to L1tip,
 // measured parallel to the functional occlusal plane.
 // Positive = upper incisor anterior to lower (normal).
@@ -308,9 +299,6 @@ const MEAS_MCNAMARA = [
 
   {s:'Skeletal',  n:'Mandibular Plane Angle (McNamara)', d:'Frankfort horizontal to mandibular plane (Go-Me)',
    norm:[22,4],   u:'°',  c:p=> mpAngMcN(p)},
-
-  {s:'Skeletal',  n:'Facial Axis Angle',           d:'Angle between N-Ba and PNS-Gn lines',
-   norm:[90,3],   u:'°',  c:p=> facialAxis(p)},
 
   {s:'Skeletal',  n:'Pog to N-Perp (FH)',          d:'Horizontal distance of Pogonion to N-perpendicular; +ve = anterior',
    norm:[0,4],    u:'mm', c:p=> distToNPerp(p.Pog, p.N, p.Po, p.Or)},
@@ -974,9 +962,7 @@ function drawLines(){
 
   // ── Cranial base & reference planes ──────────
   ln('S','N',  '#58a6ff',1.5,[]);        // SN line
-  ln('S','Ba', '#58a6ff',1,[4,3]);       // cranial base
   ln('Po','Or','#8fafc8',1,[4,3]);       // Frankfort horizontal
-  ln('N','Ba', '#4480cc',1,[3,4]);       // N-Ba (facial axis)
 
   // ── Maxillary structures ──────────────────────
   ln('ANS','PNS','#3fb950',1.2,[]);      // palatal plane
@@ -1702,9 +1688,7 @@ document.getElementById('export-btn').addEventListener('click', async () => {
 
       // Cranial base & reference planes
       drawLine('S','N',  '#58a6ff',1.5,[]);
-      drawLine('S','Ba', '#58a6ff',1,[4,3]);
       drawLine('Po','Or','#8fafc8',1,[4,3]);
-      drawLine('N','Ba', '#4480cc',1,[3,4]);
 
       // Maxillary structures
       drawLine('ANS','PNS','#3fb950',1.2,[]);
