@@ -1598,7 +1598,26 @@ document.getElementById('export-btn').addEventListener('click', async () => {
   doc.setLineWidth(0.3);
   doc.line(0, 22, W, 22);
 
-  // Logo text
+  // Centered logo image — black background removed via pixel-level threshold
+  const logoImg = document.getElementById('spl-wordmark') || document.querySelector('img[src*="logo"]');
+  if(logoImg && logoImg.complete && logoImg.naturalWidth > 0){
+    const lc = document.createElement('canvas');
+    lc.width = logoImg.naturalWidth; lc.height = logoImg.naturalHeight;
+    const lx = lc.getContext('2d');
+    lx.drawImage(logoImg, 0, 0);
+    const id = lx.getImageData(0, 0, lc.width, lc.height);
+    const d = id.data;
+    // Make near-black pixels transparent
+    for(let i = 0; i < d.length; i += 4){
+      if(d[i] < 40 && d[i+1] < 40 && d[i+2] < 40) d[i+3] = 0;
+    }
+    lx.putImageData(id, 0, 0);
+    const logoH = 14; // mm
+    const logoW = logoH * (lc.width / lc.height);
+    doc.addImage(lc.toDataURL('image/png'), 'PNG', (W - logoW) / 2, 4, logoW, logoH);
+  }
+
+  // "OrthoTimes" text — top left
   doc.setFont('helvetica','bold');
   doc.setFontSize(13);
   setTxt(CLR.accent);
