@@ -89,15 +89,32 @@ function lineAng(l1, l2){
   return Math.acos(Math.max(-1,Math.min(1,cos)))*180/Math.PI;
 }
 
-// Incisor inclination to a reference plane.
-// axis = apex→tip vector; plane = posterior→anterior direction.
-// Returns the true angle between tooth axis and plane (0–180°).
-function inclin(apexPt, tipPt, planePost, planeAnt){
-  const ax={x:tipPt.x-apexPt.x, y:tipPt.y-apexPt.y};
-  const pl={x:planeAnt.x-planePost.x, y:planeAnt.y-planePost.y};
+// Raw angle between two vectors (0–180°)
+function vecAngle(ax, pl){
   const lenAx=Math.sqrt(ax.x**2+ax.y**2), lenPl=Math.sqrt(pl.x**2+pl.y**2);
   const cosA=(ax.x*pl.x+ax.y*pl.y)/(lenAx*lenPl);
   return Math.acos(Math.max(-1,Math.min(1,cosA)))*180/Math.PI;
+}
+
+// U1 inclination to a plane (apex ABOVE tip in image coords)
+// 180 - raw angle gives the conventional ~109°
+function inclinU(apexPt, tipPt, planePost, planeAnt){
+  const ax={x:tipPt.x-apexPt.x, y:tipPt.y-apexPt.y};
+  const pl={x:planeAnt.x-planePost.x, y:planeAnt.y-planePost.y};
+  return 180 - vecAngle(ax, pl);
+}
+
+// L1 inclination to a plane (apex BELOW tip in image coords)
+// Raw angle directly gives the conventional ~93°
+function inclinL(apexPt, tipPt, planePost, planeAnt){
+  const ax={x:tipPt.x-apexPt.x, y:tipPt.y-apexPt.y};
+  const pl={x:planeAnt.x-planePost.x, y:planeAnt.y-planePost.y};
+  return vecAngle(ax, pl);
+}
+
+// Legacy alias (used by impa and others expecting L1-style)
+function inclin(apexPt, tipPt, planePost, planeAnt){
+  return inclinL(apexPt, tipPt, planePost, planeAnt);
 }
 
 // Interincisal angle = angle between the two long-axis vectors (apex→tip each).
@@ -177,7 +194,7 @@ const MEAS=[
 
   // ── Dental ───────────────────────────────────
   {s:'Dental', n:'U1 to Maxillary Plane', d:'Upper incisor long axis to palatal plane',
-   norm:[109,6], u:'°', c:p=> inclin(p.U1ap, p.U1tip, p.PNS, p.ANS)},
+   norm:[109,6], u:'°', c:p=> inclinU(p.U1ap, p.U1tip, p.PNS, p.ANS)},
 
   {s:'Dental', n:'L1 to Mandibular Plane', d:'Lower incisor long axis to mandibular plane',
    norm:[93,6], u:'°', c:p=> inclin(p.L1ap, p.L1tip, p.Go, p.Me)},
