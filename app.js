@@ -1606,7 +1606,7 @@ document.getElementById('export-btn').addEventListener('click', async () => {
   const otW = doc.getTextWidth('OrthoTimes');
   doc.setFont('helvetica','normal');
   setTxt(CLR.muted);
-  doc.text(' QuickCephTool', margin + otW, 13);
+  doc.text(' Pixel Ceph', margin + otW, 13);
 
   // Mode badge
   const modeName =
@@ -1904,11 +1904,11 @@ document.getElementById('export-btn').addEventListener('click', async () => {
     doc.setFont('helvetica','normal');
     doc.setFontSize(6);
     setTxt(CLR.muted);
-    doc.text('OrthoTimes QuickCephTool — For clinical use only', margin, H - 6);
+    doc.text('OrthoTimes Pixel Ceph — For clinical use only', margin, H - 6);
     doc.text(`Page ${pg} of ${pageCount}`, W - margin, H - 6, { align: 'right' });
   }
 
-  const _pn=(document.getElementById('patient-name').value||'').trim();doc.save(_pn?`${_pn.replace(/[^a-zA-Z0-9_\-]/g,'_')}_ceph_${new Date().toISOString().slice(0,10)}.pdf`:`QuickCephTool_${modeName.replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.pdf`);
+  const _pn=(document.getElementById('patient-name').value||'').trim();doc.save(_pn?`${_pn.replace(/[^a-zA-Z0-9_\-]/g,'_')}_ceph_${new Date().toISOString().slice(0,10)}.pdf`:`PixelCeph_${modeName.replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.pdf`);
 });
 
 
