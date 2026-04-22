@@ -1,4 +1,4 @@
-  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;1,300&family=Inter:wght@400;500;600;700;800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;1,300&family=Inter:wght@400;500;600;700;800&family=Raleway:wght@300&display=swap');
   :root{
     --bg:#0a0a0a;
     --surface:#111111;
@@ -649,5 +649,8 @@
   animation:toast-in .2s ease;
 }
 @keyframes toast-in{from{opacity:0;transform:translateX(-50%) translateY(-8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
-#header-logo{height:28px !important;width:auto !important;object-fit:contain;margin-left:auto;opacity:.92;}
+#header-logo{height:32px !important;width:auto !important;object-fit:contain;margin-right:10px;flex-shrink:0;opacity:.92;}
+#header-brand{display:flex;align-items:center;gap:6px;flex-shrink:0;margin-right:10px;}
+#header-icon{height:28px;width:auto;object-fit:contain;}
+#header-pixel{font-family:'Raleway',sans-serif;font-weight:300;font-size:1.45rem;color:#3bb8f0;letter-spacing:-.01em;line-height:1;}
 #ai-qc-label{width:48px !important;height:48px !important;object-fit:contain;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);opacity:.85;}
