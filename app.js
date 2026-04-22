@@ -1622,10 +1622,6 @@ document.getElementById('export-btn').addEventListener('click', async () => {
   doc.setFontSize(13);
   setTxt(CLR.accent);
   doc.text('OrthoTimes', margin, 13);
-  const otW = doc.getTextWidth('OrthoTimes');
-  doc.setFont('helvetica','normal');
-  setTxt(CLR.muted);
-  doc.text(' Pixel Ceph', margin + otW, 13);
 
   // Mode badge
   const modeName =
