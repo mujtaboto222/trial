@@ -90,16 +90,14 @@ function lineAng(l1, l2){
 }
 
 // Incisor inclination to a reference plane.
-// Verified formula: 180° minus the acute angle between tooth axis and plane direction.
 // axis = apex→tip vector; plane = posterior→anterior direction.
-// Gives 109° for normal U1, 93° for normal L1. ✓ tested with known coords.
+// Returns the true angle between tooth axis and plane (0–180°).
 function inclin(apexPt, tipPt, planePost, planeAnt){
   const ax={x:tipPt.x-apexPt.x, y:tipPt.y-apexPt.y};
   const pl={x:planeAnt.x-planePost.x, y:planeAnt.y-planePost.y};
   const lenAx=Math.sqrt(ax.x**2+ax.y**2), lenPl=Math.sqrt(pl.x**2+pl.y**2);
-  const cosA=Math.abs((ax.x*pl.x+ax.y*pl.y)/(lenAx*lenPl));
-  const acuteAngle=Math.acos(Math.max(-1,Math.min(1,cosA)))*180/Math.PI;
-  return 180 - acuteAngle;
+  const cosA=(ax.x*pl.x+ax.y*pl.y)/(lenAx*lenPl);
+  return Math.acos(Math.max(-1,Math.min(1,cosA)))*180/Math.PI;
 }
 
 // Interincisal angle = angle between the two long-axis vectors (apex→tip each).
@@ -1598,30 +1596,15 @@ document.getElementById('export-btn').addEventListener('click', async () => {
   doc.setLineWidth(0.3);
   doc.line(0, 22, W, 22);
 
-  // Centered logo image — black background removed via pixel-level threshold
-  const logoImg = document.getElementById('spl-wordmark') || document.querySelector('img[src*="logo"]');
-  if(logoImg && logoImg.complete && logoImg.naturalWidth > 0){
-    const lc = document.createElement('canvas');
-    lc.width = logoImg.naturalWidth; lc.height = logoImg.naturalHeight;
-    const lx = lc.getContext('2d');
-    lx.drawImage(logoImg, 0, 0);
-    const id = lx.getImageData(0, 0, lc.width, lc.height);
-    const d = id.data;
-    // Make near-black pixels transparent
-    for(let i = 0; i < d.length; i += 4){
-      if(d[i] < 40 && d[i+1] < 40 && d[i+2] < 40) d[i+3] = 0;
-    }
-    lx.putImageData(id, 0, 0);
-    const logoH = 14; // mm
-    const logoW = logoH * (lc.width / lc.height);
-    doc.addImage(lc.toDataURL('image/png'), 'PNG', (W - logoW) / 2, 4, logoW, logoH);
-  }
-
-  // "OrthoTimes" text — top left
+  // Logo text
   doc.setFont('helvetica','bold');
   doc.setFontSize(13);
   setTxt(CLR.accent);
   doc.text('OrthoTimes', margin, 13);
+  const otW = doc.getTextWidth('OrthoTimes');
+  doc.setFont('helvetica','normal');
+  setTxt(CLR.muted);
+  doc.text(' Pixel Ceph', margin + otW, 13);
 
   // Mode badge
   const modeName =
