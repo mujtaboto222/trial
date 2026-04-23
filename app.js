@@ -105,11 +105,12 @@ function inclinU(apexPt, tipPt, planePost, planeAnt){
 }
 
 // L1 inclination to a plane (apex BELOW tip in image coords)
-// Raw angle directly gives the conventional ~93°
+// Norm is ~93° (obtuse). Return the obtuse side.
 function inclinL(apexPt, tipPt, planePost, planeAnt){
   const ax={x:tipPt.x-apexPt.x, y:tipPt.y-apexPt.y};
   const pl={x:planeAnt.x-planePost.x, y:planeAnt.y-planePost.y};
-  return vecAngle(ax, pl);
+  const a = vecAngle(ax, pl);
+  return a < 90 ? 180 - a : a;
 }
 
 // Legacy alias (used by impa and others expecting L1-style)
