@@ -609,6 +609,17 @@ document.addEventListener('keydown', e => {
   }
 });
 let imgEl=null;
+let logoBase64=null;
+(function preloadLogo(){
+  const img=new Image();
+  img.onload=function(){
+    const c=document.createElement('canvas');
+    c.width=img.naturalWidth; c.height=img.naturalHeight;
+    c.getContext('2d').drawImage(img,0,0);
+    logoBase64=c.toDataURL('image/png');
+  };
+  img.src='logo.png';
+})();
 let scale=1,panX=0,panY=0,isPanning=false,panStart={x:0,y:0},panOrigin={x:0,y:0};
 let _panMoved=false;
 let showLines=true,showMag=true,showGrid=false;
@@ -658,7 +669,7 @@ function markPlaced(id){
   document.getElementById('lmi-'+id)?.classList.add('placed');
   updateProg();updateHdrHint();
   // Auto-fit occlusal plane when occlusal landmarks change
-  if(['U6','L6','U4','L4','L1tip'].includes(id)) fitOccPlane();
+  if(['U6','L6','U4','L4','U1tip','L1tip'].includes(id)) fitOccPlane();
 }
 
 // Fit occPlane through occlusal landmarks.
@@ -681,16 +692,20 @@ function fitOccPlane(){
     y: postPts.reduce((s,pt)=>s+pt.y,0)/postPts.length
   };
 
-  // Anterior: prefer L1tip, fallback to premolar average
+  // Anterior: midpoint of U1tip and L1tip, fallback to premolar average
+  const antPts = [p.U1tip, p.L1tip].filter(Boolean);
   let ant = null;
-  if(p.L1tip){
-    ant = {x: p.L1tip.x, y: p.L1tip.y};
-  } else {
-    const antPts = [p.U4, p.L4].filter(Boolean);
-    if(antPts.length === 0) return;
+  if(antPts.length > 0){
     ant = {
       x: antPts.reduce((s,pt)=>s+pt.x,0)/antPts.length,
       y: antPts.reduce((s,pt)=>s+pt.y,0)/antPts.length
+    };
+  } else {
+    const premPts = [p.U4, p.L4].filter(Boolean);
+    if(premPts.length === 0) return;
+    ant = {
+      x: premPts.reduce((s,pt)=>s+pt.x,0)/premPts.length,
+      y: premPts.reduce((s,pt)=>s+pt.y,0)/premPts.length
     };
   }
 
@@ -1628,15 +1643,18 @@ document.getElementById('export-btn').addEventListener('click', async () => {
   doc.setLineWidth(0.3);
   doc.line(0, 22, W, 22);
 
-  // Logo text
-  doc.setFont('helvetica','bold');
-  doc.setFontSize(13);
-  setTxt(CLR.accent);
-  doc.text('OrthoTimes', margin, 13);
-  const otW = doc.getTextWidth('OrthoTimes');
-  doc.setFont('helvetica','normal');
-  setTxt(CLR.muted);
-  doc.text(' Pixel Ceph', margin + otW, 13);
+  // Logo image centered in header
+  if(logoBase64){
+    const logoH = 12; // mm tall
+    const logoAspect = 1568 / 336;
+    const logoW = logoH * logoAspect;
+    doc.addImage(logoBase64, 'PNG', (W - logoW) / 2, (22 - logoH) / 2, logoW, logoH);
+  } else {
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(13);
+    setTxt(CLR.accent);
+    doc.text('Pixel Ceph', W/2, 13, {align:'center'});
+  }
 
   // Mode badge
   const modeName =
