@@ -96,24 +96,38 @@ function vecAngle(ax, pl){
   return Math.acos(Math.max(-1,Math.min(1,cosA)))*180/Math.PI;
 }
 
-// U1 inclination to a plane (apex ABOVE tip in image coords)
-// 180 - raw angle gives the conventional ~109°
+// U1 inclination to a plane.
+// Clinically: angle between upper incisor axis and palatal plane, measured
+// on the superior/posterior side. For a normally inclined U1 this is ~109°.
+// U1 apex is ABOVE tip (smaller y). The axis vector (apex→tip) points downward.
+// The palatal plane (PNS→ANS) points forward.
+// We check: if tip is BELOW the plane (as expected), return 180 - raw; else raw.
 function inclinU(apexPt, tipPt, planePost, planeAnt){
   const ax={x:tipPt.x-apexPt.x, y:tipPt.y-apexPt.y};
   const pl={x:planeAnt.x-planePost.x, y:planeAnt.y-planePost.y};
-  return 180 - vecAngle(ax, pl);
+  const raw = vecAngle(ax, pl);
+  // cross product: plane × vector from planePost to tipPt
+  // positive (y-down coords) = tipPt is BELOW the plane
+  const cross = pl.x*(tipPt.y-planePost.y) - pl.y*(tipPt.x-planePost.x);
+  return cross > 0 ? 180 - raw : raw;
 }
 
-// L1 inclination to a plane (apex BELOW tip in image coords)
-// Norm is ~93° (obtuse). Return the obtuse side.
+// L1 inclination to a plane.
+// Clinically: angle between lower incisor axis and mandibular plane (Go-Me),
+// measured on the ANTERIOR side where the tooth leans into the plane. ~93° normal.
+// L1 apex is BELOW tip (larger y). The axis vector (apex→tip) points upward.
+// We check: if tip is ABOVE the plane (as expected for a lower incisor), return 180 - raw; else raw.
 function inclinL(apexPt, tipPt, planePost, planeAnt){
   const ax={x:tipPt.x-apexPt.x, y:tipPt.y-apexPt.y};
   const pl={x:planeAnt.x-planePost.x, y:planeAnt.y-planePost.y};
-  const a = vecAngle(ax, pl);
-  return a < 90 ? 180 - a : a;
+  const raw = vecAngle(ax, pl);
+  // cross product sign tells us which side of the plane the tip is on
+  // In y-down image coords: negative cross = tip is ABOVE the plane
+  const cross = pl.x*(tipPt.y-planePost.y) - pl.y*(tipPt.x-planePost.x);
+  return cross < 0 ? 180 - raw : raw;
 }
 
-// Legacy alias (used by impa and others expecting L1-style)
+// Legacy alias
 function inclin(apexPt, tipPt, planePost, planeAnt){
   return inclinL(apexPt, tipPt, planePost, planeAnt);
 }
