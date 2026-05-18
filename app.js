@@ -2387,6 +2387,12 @@ setInterval(function(){ fetch('https://mujtaba1212-ceph-landmark-detector.hf.spa
             prog.style.width = '0%';
             renderOvl();
             updateProg();
+            // AI disclaimer toast
+            var dt = document.createElement('div');
+            dt.id = 'ai-disclaimer-toast';
+            dt.textContent = 'Landmark positions are AI-suggested. Please verify points to ensure accurate results.';
+            document.body.appendChild(dt);
+            setTimeout(function(){ dt.classList.add('hide'); setTimeout(function(){ dt.remove(); }, 600); }, 4000);
             setTimeout(function(){
               document.getElementById('analyse-btn').click();
             }, 400);
