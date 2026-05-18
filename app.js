@@ -2390,7 +2390,7 @@ setInterval(function(){ fetch('https://mujtaba1212-ceph-landmark-detector.hf.spa
             // AI disclaimer toast
             var dt = document.createElement('div');
             dt.id = 'ai-disclaimer-toast';
-            dt.textContent = 'AI suggested landmarks - please verify before use';
+            dt.textContent = 'AI detection complete — check for adjustments if needed.';
             document.body.appendChild(dt);
             setTimeout(function(){ dt.classList.add('hide'); setTimeout(function(){ dt.remove(); }, 600); }, 4000);
             setTimeout(function(){
