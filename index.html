@@ -207,7 +207,7 @@
     <div id="ai-status">Initialising model…</div>
   </div>
   <div id="ai-chips"></div>
-</div><!-- Magnifier --><div id="magnifier"><canvas id="mag-canvas" width="160" height="160"></canvas><svg id="mag-crosshair" width="14" height="14" viewBox="0 0 14 14"><line x1="7" y1="0" x2="7" y2="14" stroke="rgba(255,80,80,.9)" stroke-width="1"/><line x1="0" y1="7" x2="14" y2="7" stroke="rgba(255,80,80,.9)" stroke-width="1"/><circle cx="7" cy="7" r="2.5" fill="none" stroke="rgba(255,80,80,.9)" stroke-width="1"/></svg><div id="mag-resize"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="3" y1="10" x2="10" y2="3"/><line x1="6" y1="10" x2="10" y2="6"/></svg></div></div><div class="toolbar" id="toolbar" style="display:none;"><button class="tb" id="zoom-in">＋</button><button class="tb" id="zoom-out">－</button><button class="tb" id="fit-btn">Fit</button><span class="zoom-lbl" id="zoom-lbl">100%</span><button class="tb" id="adj-btn" title="Adjust image brightness & contrast">☀ Adjust</button><button class="tb" id="lines-btn">Lines ON</button><button class="tb" id="grid-btn">⊞ Grid OFF</button><button class="tb" id="mag-btn" title="Toggle magnifier"><svg class="tb-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg>Magnifier ON</button><button class="tb" id="calib-btn" title="Click two points of known distance to calibrate mm scale">Calibrate</button><button class="tb" id="clear-btn">Clear</button><button class="tb primary" id="analyse-btn" disabled>Analyse</button></div>
+</div><!-- Magnifier --><div id="magnifier"><canvas id="mag-canvas" width="160" height="160"></canvas><svg id="mag-crosshair" width="14" height="14" viewBox="0 0 14 14"><line x1="7" y1="0" x2="7" y2="14" stroke="rgba(255,80,80,.9)" stroke-width="1"/><line x1="0" y1="7" x2="14" y2="7" stroke="rgba(255,80,80,.9)" stroke-width="1"/><circle cx="7" cy="7" r="2.5" fill="none" stroke="rgba(255,80,80,.9)" stroke-width="1"/></svg><div id="mag-resize"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="3" y1="10" x2="10" y2="3"/><line x1="6" y1="10" x2="10" y2="6"/></svg></div></div><div class="toolbar" id="toolbar" style="display:none;"><button class="tb" id="zoom-in">＋</button><button class="tb" id="zoom-out">－</button><button class="tb" id="fit-btn">Fit</button><span class="zoom-lbl" id="zoom-lbl">100%</span><button class="tb" id="adj-btn" title="Adjust image brightness & contrast">☀ Adjust</button><button class="tb" id="lines-btn">Lines ON</button><button class="tb" id="tracing-btn">Tracing OFF</button><button class="tb" id="grid-btn">⊞ Grid OFF</button><button class="tb" id="mag-btn" title="Toggle magnifier"><svg class="tb-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg>Magnifier ON</button><button class="tb" id="calib-btn" title="Click two points of known distance to calibrate mm scale">Calibrate</button><button class="tb" id="clear-btn">Clear</button><button class="tb primary" id="analyse-btn" disabled>Analyse</button></div>
 <!-- Image adjustment popup -->
 <div id="img-adj-popup">
   <div class="adj-row"><span class="adj-lbl">Brightness</span><input class="adj-slider" id="adj-brightness" type="range" min="-100" max="100" value="0"><span class="adj-val" id="adj-brightness-val">0</span></div>
@@ -314,5 +314,172 @@
       panel.classList.remove('open');
     }
   });
+
+  // ── Exit feedback popup (shows once per user) ──
+  var exitShown = localStorage.getItem('pixelceph_exit_feedback') === '1';
+
+  function showExitPopup(){
+    if(exitShown) return;
+    exitShown = true;
+    localStorage.setItem('pixelceph_exit_feedback', '1');
+    document.getElementById('exit-overlay').style.display = 'flex';
+  }
+
+  // Trigger when user moves mouse toward top of window (likely heading for close/back)
+  document.addEventListener('mouseleave', function(e){
+    if(e.clientY <= 0) showExitPopup();
+  });
+
+  function exitSkip(){
+    document.getElementById('exit-overlay').style.display = 'none';
+  }
+
+  function exitSendFeedback(){
+    // Sync exit popup fields into the existing fb-* inputs, then reuse sendFeedback()
+    document.getElementById('fb-name').value  = document.getElementById('ex-name').value;
+    document.getElementById('fb-email').value = document.getElementById('ex-email').value;
+    document.getElementById('fb-msg').value   = document.getElementById('ex-msg').value;
+    // selectedRating is already a global shared with sendFeedback() — no extra sync needed
+    sendFeedback();
+    setTimeout(exitSkip, 2600);
+  }
+
+  // Star rating inside the exit popup (writes to the same selectedRating variable)
+  document.querySelectorAll('.ex-star').forEach(function(s){
+    s.addEventListener('click', function(){
+      selectedRating = parseInt(s.getAttribute('data-v'));
+      document.querySelectorAll('.ex-star').forEach(function(x){
+        x.classList.toggle('active', parseInt(x.getAttribute('data-v')) <= selectedRating);
+      });
+    });
+  });
 </script>
+
+<!-- ── Exit feedback popup (glassy) ── -->
+<style>
+  #exit-overlay{
+    display:none;position:fixed;inset:0;z-index:99999;
+    align-items:center;justify-content:center;
+    background:radial-gradient(ellipse at center, rgba(10,15,30,.55), rgba(0,0,0,.85));
+    backdrop-filter:blur(14px) saturate(140%);
+    -webkit-backdrop-filter:blur(14px) saturate(140%);
+    animation:ex-fade .25s ease-out;
+  }
+  @keyframes ex-fade{ from{opacity:0;} to{opacity:1;} }
+  @keyframes ex-rise{
+    from{opacity:0;transform:translateY(14px) scale(.96);}
+    to  {opacity:1;transform:translateY(0)    scale(1);}
+  }
+  .ex-card{
+    position:relative;
+    width:360px;max-width:90vw;padding:26px 24px 22px;
+    border-radius:18px;
+    background:linear-gradient(160deg,rgba(255,255,255,.08) 0%,rgba(255,255,255,.03) 100%);
+    border:1px solid rgba(255,255,255,.14);
+    backdrop-filter:blur(30px) saturate(160%);
+    -webkit-backdrop-filter:blur(30px) saturate(160%);
+    box-shadow:
+      0 20px 60px rgba(0,0,0,.55),
+      0 1px 0 rgba(255,255,255,.12) inset,
+      0 0 0 1px rgba(59,184,240,.08) inset;
+    font-family:'Inter',sans-serif;color:#fff;
+    animation:ex-rise .35s cubic-bezier(.4,0,.2,1);
+    overflow:hidden;
+  }
+  /* Subtle accent glow at the top edge */
+  .ex-card::before{
+    content:'';position:absolute;top:-1px;left:20%;right:20%;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(59,184,240,.6),transparent);
+  }
+  .ex-card::after{
+    content:'';position:absolute;top:-80px;right:-80px;width:200px;height:200px;
+    background:radial-gradient(circle,rgba(59,184,240,.18),transparent 70%);
+    pointer-events:none;
+  }
+  .ex-title{
+    margin:0 0 6px;font-size:1rem;font-weight:600;letter-spacing:-.01em;
+    background:linear-gradient(180deg,#fff,rgba(255,255,255,.75));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  }
+  .ex-sub{
+    margin:0 0 18px;font-size:.7rem;color:rgba(255,255,255,.55);line-height:1.5;
+  }
+  .ex-badge{
+    display:inline-block;margin-bottom:14px;padding:3px 10px;
+    background:rgba(59,184,240,.12);border:1px solid rgba(59,184,240,.28);
+    border-radius:20px;font-size:.55rem;color:#7dd3fc;
+    text-transform:uppercase;letter-spacing:.08em;font-weight:600;
+  }
+  .ex-stars{
+    display:flex;flex-direction:row-reverse;justify-content:flex-end;
+    gap:6px;margin-bottom:14px;
+  }
+  .ex-star{
+    font-size:1.6rem;color:rgba(255,255,255,.18);cursor:pointer;
+    transition:color .15s,transform .15s;
+  }
+  .ex-star:hover,.ex-star:hover~.ex-star{ color:#f5c518;transform:scale(1.1); }
+  .ex-star.active,.ex-star.active~.ex-star{ color:#f5c518; }
+  .ex-input{
+    width:100%;box-sizing:border-box;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.1);
+    border-radius:10px;padding:10px 12px;margin-top:8px;
+    color:#fff;font-family:'Inter',sans-serif;font-size:.7rem;
+    outline:none;transition:all .2s;
+  }
+  .ex-input:focus{
+    background:rgba(59,184,240,.06);
+    border-color:rgba(59,184,240,.5);
+    box-shadow:0 0 0 3px rgba(59,184,240,.1);
+  }
+  .ex-input::placeholder{ color:rgba(255,255,255,.35); }
+  textarea.ex-input{ resize:none;height:80px; }
+  .ex-btns{ display:flex;gap:10px;margin-top:16px; }
+  .ex-btn{
+    padding:11px 14px;border-radius:10px;font-size:.7rem;font-weight:600;
+    cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:.01em;
+    transition:all .2s cubic-bezier(.4,0,.2,1);
+  }
+  .ex-skip{
+    flex:1;background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.55);
+  }
+  .ex-skip:hover{
+    background:rgba(255,255,255,.08);color:rgba(255,255,255,.8);
+    border-color:rgba(255,255,255,.18);
+  }
+  .ex-send{
+    flex:2;border:none;color:#000;font-weight:700;
+    background:linear-gradient(160deg,#4fcfff 0%,#3bb8f0 55%,#1fa3df 100%);
+    box-shadow:0 4px 16px rgba(59,184,240,.35),0 1px 0 rgba(255,255,255,.3) inset;
+  }
+  .ex-send:hover{
+    transform:translateY(-1px);
+    box-shadow:0 6px 22px rgba(59,184,240,.5),0 1px 0 rgba(255,255,255,.35) inset;
+  }
+  .ex-btn:active{ transform:scale(.97); }
+</style>
+
+<div id="exit-overlay">
+  <div class="ex-card">
+    <span class="ex-badge">Beta Testing</span>
+    <h3 class="ex-title">Before you go — rate PixelCeph</h3>
+    <p class="ex-sub">Your feedback helps us improve PixelCeph during the testing phase.</p>
+    <div class="ex-stars">
+      <span class="ex-star" data-v="5">★</span>
+      <span class="ex-star" data-v="4">★</span>
+      <span class="ex-star" data-v="3">★</span>
+      <span class="ex-star" data-v="2">★</span>
+      <span class="ex-star" data-v="1">★</span>
+    </div>
+    <input id="ex-name"  class="ex-input" type="text"  placeholder="Your name (optional)">
+    <input id="ex-email" class="ex-input" type="email" placeholder="Your email">
+    <textarea id="ex-msg" class="ex-input" placeholder="What can we improve?"></textarea>
+    <div class="ex-btns">
+      <button class="ex-btn ex-skip" onclick="exitSkip()">Skip</button>
+      <button class="ex-btn ex-send" onclick="exitSendFeedback()">Send Feedback</button>
+    </div>
+  </div>
+</div>
 </body></html>

@@ -622,7 +622,7 @@ let logoBase64=null;
 })();
 let scale=1,panX=0,panY=0,isPanning=false,panStart={x:0,y:0},panOrigin={x:0,y:0};
 let _panMoved=false;
-let showLines=true,showMag=true,showGrid=false;
+let showLines=true,showMag=true,showGrid=false,showTracing=false;
 let cW=0,cH=0,iW=0,iH=0,iX=0,iY=0;
 let mouseCanvasX=0,mouseCanvasY=0;
 
@@ -939,6 +939,7 @@ function renderOvl(){
   while(svg.firstChild)svg.removeChild(svg.firstChild);
   if(!imgEl)return;
   if(showLines)drawLines();
+  if(showTracing)drawTracing();
 
   // ── Occlusal plane straight line ─────────────
   if(occPlane){
@@ -1038,6 +1039,54 @@ function drawLines(){
   // ── Occlusal contacts (dotted, gold) ──────────
   ln('U6','L6', '#e8c06c',1,[3,3]);      // molar contact
   ln('U4','L4', '#e8c06c',1,[3,3]);      // premolar contact
+}
+
+// Convert array of canvas {x,y} points to a smooth SVG cubic bezier path (catmull-rom)
+function smoothPath(points){
+  if(points.length < 2) return '';
+  if(points.length === 2) return 'M ' + points[0].x + ' ' + points[0].y + ' L ' + points[1].x + ' ' + points[1].y;
+  const t = 0.5;
+  let d = 'M ' + points[0].x + ' ' + points[0].y;
+  for(let i = 0; i < points.length - 1; i++){
+    const p0 = points[Math.max(0, i-1)];
+    const p1 = points[i];
+    const p2 = points[i+1];
+    const p3 = points[Math.min(points.length-1, i+2)];
+    const cp1x = p1.x + (p2.x - p0.x) * t / 2;
+    const cp1y = p1.y + (p2.y - p0.y) * t / 2;
+    const cp2x = p2.x - (p3.x - p1.x) * t / 2;
+    const cp2y = p2.y - (p3.y - p1.y) * t / 2;
+    d += ' C ' + cp1x + ' ' + cp1y + ', ' + cp2x + ' ' + cp2y + ', ' + p2.x + ' ' + p2.y;
+  }
+  return d;
+}
+
+function drawTracing(){
+  const p = {};
+  LM.forEach(l => { if(pts[l.id]) p[l.id] = toC(pts[l.id].x, pts[l.id].y); });
+
+  const structures = [
+    { ids: ['Po','S','N'],                       col: '#58a6ff', w: 1.8 },
+    { ids: ['Co','Ar','Go','Me','Gn','Pog','B'], col: '#f0883e', w: 2.0 },
+    { ids: ['N','ANS','A'],                      col: '#3fb950', w: 1.8 },
+    { ids: ['ANS','PNS'],                        col: '#3fb950', w: 1.5 },
+    { ids: ['U1ap','U1tip'],                     col: '#3fb950', w: 1.8 },
+    { ids: ['L1ap','L1tip'],                     col: '#f0883e', w: 1.8 },
+    { ids: ['Prn','Sn','Ls','Li','Pogp'],        col: '#bc8cff', w: 1.8 },
+  ];
+
+  structures.forEach(s => {
+    const seq = s.ids.map(id => p[id]).filter(Boolean);
+    if(seq.length < 2) return;
+    svg.appendChild(mkEl('path', {
+      d: smoothPath(seq),
+      fill: 'none',
+      stroke: s.col,
+      'stroke-width': s.w,
+      opacity: 0.85,
+      'pointer-events': 'none'
+    }));
+  });
 }
 
 
@@ -1236,6 +1285,7 @@ document.getElementById('zoom-out').addEventListener('click',()=>{
 });
 document.getElementById('fit-btn').addEventListener('click',()=>{fitImg();drawImg();renderOvl();});
 document.getElementById('lines-btn').addEventListener('click',function(){showLines=!showLines;this.textContent=showLines?'Lines ON':'Lines OFF';renderOvl();});
+document.getElementById('tracing-btn').addEventListener('click',function(){showTracing=!showTracing;this.textContent=showTracing?'Tracing ON':'Tracing OFF';renderOvl();});
 document.getElementById('grid-btn').addEventListener('click',function(){
   showGrid=!showGrid;
   this.textContent=showGrid?'⊞ Grid ON':'⊞ Grid OFF';
@@ -1777,6 +1827,47 @@ document.getElementById('export-btn').addEventListener('click', async () => {
       oc.setLineDash([]); // reset
     }
 
+    // Draw cephalometric tracing if enabled
+    if(showTracing){
+      const tracingStructures = [
+        { ids: ['Po','S','N'],                       col: '#58a6ff', w: 1.8 },
+        { ids: ['Co','Ar','Go','Me','Gn','Pog','B'], col: '#f0883e', w: 2.0 },
+        { ids: ['N','ANS','A'],                      col: '#3fb950', w: 1.8 },
+        { ids: ['ANS','PNS'],                        col: '#3fb950', w: 1.5 },
+        { ids: ['U1ap','U1tip'],                     col: '#3fb950', w: 1.8 },
+        { ids: ['L1ap','L1tip'],                     col: '#f0883e', w: 1.8 },
+        { ids: ['Prn','Sn','Ls','Li','Pogp'],        col: '#bc8cff', w: 1.8 },
+      ];
+      tracingStructures.forEach(s => {
+        const tPts = s.ids.map(id => pReport[id]).filter(Boolean);
+        if(tPts.length < 2) return;
+        const t = 0.5;
+        oc.beginPath();
+        oc.moveTo(tPts[0].x, tPts[0].y);
+        if(tPts.length === 2){
+          oc.lineTo(tPts[1].x, tPts[1].y);
+        } else {
+          for(let i = 0; i < tPts.length - 1; i++){
+            const p0 = tPts[Math.max(0, i-1)];
+            const p1 = tPts[i];
+            const p2 = tPts[i+1];
+            const p3 = tPts[Math.min(tPts.length-1, i+2)];
+            oc.bezierCurveTo(
+              p1.x + (p2.x-p0.x)*t/2, p1.y + (p2.y-p0.y)*t/2,
+              p2.x - (p3.x-p1.x)*t/2, p2.y - (p3.y-p1.y)*t/2,
+              p2.x, p2.y
+            );
+          }
+        }
+        oc.strokeStyle = s.col;
+        oc.lineWidth = s.w;
+        oc.globalAlpha = 0.85;
+        oc.setLineDash([]);
+        oc.stroke();
+        oc.globalAlpha = 1;
+      });
+    }
+
     // Draw occlusal plane if present
     if(occPlane){
       const occ1 = {x: occPlane.p1.x * REPORT_W, y: occPlane.p1.y * REPORT_H};
@@ -2211,8 +2302,32 @@ setInterval(function(){ fetch('https://mujtaba1212-ceph-landmark-detector.hf.spa
     'UPM':'U4','UMT':'U6','LPM':'L4','LMT':'L6'
   };
 
+  var _aiCooldown = false;
+  var _aiSecs = 0;
+  var _aiCountTimer = null;
+
+  function _aiShowCountdown(){
+    var existing = document.getElementById('ai-cooldown-toast');
+    if(existing){ existing.remove(); }
+    var t = document.createElement('div');
+    t.id = 'ai-cooldown-toast';
+    t.innerHTML = 'Please wait <span id="ai-cd-num">'+_aiSecs+'</span>s';
+    document.getElementById('panel-lm').appendChild(t);
+    if(_aiCountTimer) clearInterval(_aiCountTimer);
+    _aiCountTimer = setInterval(function(){
+      var n = document.getElementById('ai-cd-num');
+      if(n) n.textContent = _aiSecs;
+    }, 500);
+  }
+
   document.getElementById('ai-detect-btn').addEventListener('click', function(){
     if(!imgEl){ alert('Please upload an X-ray image first!'); return; }
+    if(_aiCooldown){
+      _aiShowCountdown();
+      return;
+    }
+    _aiCooldown = true;
+    document.getElementById('ai-detect-btn').classList.add('ai-btn-cooldown');
 
     var overlay = document.getElementById('ai-overlay');
     var status  = document.getElementById('ai-status');
@@ -2384,15 +2499,19 @@ setInterval(function(){ fetch('https://mujtaba1212-ceph-landmark-detector.hf.spa
           setTimeout(function(){
             cancelAnimationFrame(ringAnim);
             overlay.style.display = 'none';
+            _aiCooldown = false;
+            if(_aiCountTimer) clearInterval(_aiCountTimer);
+            document.getElementById('ai-detect-btn').classList.remove('ai-btn-cooldown');
+            var ct = document.getElementById('ai-cooldown-toast'); if(ct) ct.remove();
             prog.style.width = '0%';
             renderOvl();
             updateProg();
             // AI disclaimer toast
             var dt = document.createElement('div');
             dt.id = 'ai-disclaimer-toast';
-            dt.textContent = 'AI detection complete(Quick review is always advised)';
+            dt.textContent = 'AI suggested landmarks - please verify before use';
             document.body.appendChild(dt);
-            setTimeout(function(){ dt.classList.add('hide'); setTimeout(function(){ dt.remove(); }, 600); }, 4000);
+            setTimeout(function(){ dt.classList.add('hide'); setTimeout(function(){ dt.remove(); }, 600); }, 6000);
             setTimeout(function(){
               document.getElementById('analyse-btn').click();
             }, 400);
@@ -2401,6 +2520,10 @@ setInterval(function(){ fetch('https://mujtaba1212-ceph-landmark-detector.hf.spa
         .catch(function(err){
           cancelAnimationFrame(ringAnim);
           overlay.style.display = 'none';
+          _aiCooldown = false;
+          if(_aiCountTimer) clearInterval(_aiCountTimer);
+          document.getElementById('ai-detect-btn').classList.remove('ai-btn-cooldown');
+          var ct = document.getElementById('ai-cooldown-toast'); if(ct) ct.remove();
           prog.style.width = '0%';
           alert('AI detection failed.\n' + err.message);
         });
