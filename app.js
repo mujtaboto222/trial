@@ -1132,20 +1132,15 @@ function drawRickettsBox(){
 
     // Wide hit zone for dragging. Use a barely-visible stroke (not 'transparent')
     // so SVG pointer events fire reliably across browsers.
-    const hit = mkEl('line', {
+    // NOTE: Hit-testing is now done via proximity in svg.mousedown, but we keep
+    // an invisible element here so the cursor shows 'move' on hover.
+    svg.appendChild(mkEl('line', {
       x1: cs[sp.a].x, y1: cs[sp.a].y, x2: cs[sp.b].x, y2: cs[sp.b].y,
       stroke: 'rgba(255,184,77,0.001)',
       'stroke-width': 22,
       cursor: 'move',
       'pointer-events': 'stroke'
-    });
-    hit.addEventListener('mousedown', e => {
-      e.stopPropagation();
-      rickettsBoxDrag = { which: sp.which, startBox: {...rickettsBox} };
-    });
-    hit.addEventListener('mouseenter', () => { rbHoverSide = sp.which; renderOvl(); });
-    hit.addEventListener('mouseleave', () => { rbHoverSide = null; renderOvl(); });
-    svg.appendChild(hit);
+    }));
 
     // Midpoint handle — small open circle, grows + fills on hover
     const mx = (cs[sp.a].x + cs[sp.b].x) / 2;
@@ -1186,16 +1181,11 @@ function drawRickettsBox(){
     stroke: '#f0883e', 'stroke-width': 1, 'stroke-dasharray': '3 3',
     opacity: 0.5, 'pointer-events': 'none'
   }));
-  const rhEl = mkEl('circle', {
+  svg.appendChild(mkEl('circle', {
     cx: rhC.x, cy: rhC.y, r: 6,
     fill: 'rgba(240,136,62,0.2)', stroke: '#f0883e', 'stroke-width': 2,
     cursor: 'grab', 'pointer-events': 'all'
-  });
-  rhEl.addEventListener('mousedown', e => {
-    e.stopPropagation();
-    rickettsBoxDrag = { which: 'rotate', startBox: {...rickettsBox} };
-  });
-  svg.appendChild(rhEl);
+  }));
   svg.appendChild(mkEl('circle', {
     cx: rhC.x, cy: rhC.y, r: 2, fill: '#f0883e', 'pointer-events': 'none'
   }));
@@ -1266,8 +1256,47 @@ svg.addEventListener('mousedown',e=>{
     isPanning=true;panStart={x:e.clientX,y:e.clientY};panOrigin={x:panX,y:panY};svg.style.cursor='grabbing';
     return;
   }
-  // Don't start pan if clicking on a draggable element (landmark circles or box drag zones)
-  if(rickettsBoxDrag) return; // box drag was just set by child element's handler
+
+  // Ricketts box drag — check proximity to each side / rotate handle
+  if(e.button===0 && !e.altKey && currentMode === 'ricketts' && rickettsBox){
+    const r = svg.getBoundingClientRect();
+    const mx = e.clientX - r.left, my = e.clientY - r.top;
+
+    // Check rotate handle first (small target, higher priority)
+    const rh = rbRotateHandle();
+    const rhC = toC(rh.x, rh.y);
+    if(Math.hypot(mx - rhC.x, my - rhC.y) < 12){
+      rickettsBoxDrag = { which: 'rotate', startBox: {...rickettsBox} };
+      e.stopPropagation();
+      return;
+    }
+
+    // Check each side
+    const cs = rbCorners().map(p => toC(p.x, p.y));
+    const sides = [
+      {a:0, b:1, which:'top'},
+      {a:1, b:2, which:'right'},
+      {a:2, b:3, which:'bottom'},
+      {a:3, b:0, which:'left'},
+    ];
+    const HIT_DIST = 10; // pixels from line
+    for(const sp of sides){
+      const A = cs[sp.a], B = cs[sp.b];
+      // Distance from (mx,my) to segment AB
+      const dx = B.x - A.x, dy = B.y - A.y;
+      const len2 = dx*dx + dy*dy;
+      let t = ((mx - A.x)*dx + (my - A.y)*dy) / len2;
+      t = Math.max(0, Math.min(1, t));
+      const px = A.x + t*dx, py = A.y + t*dy;
+      const dist = Math.hypot(mx - px, my - py);
+      if(dist < HIT_DIST){
+        rickettsBoxDrag = { which: sp.which, startBox: {...rickettsBox} };
+        e.stopPropagation();
+        return;
+      }
+    }
+  }
+
   if(e.button===0 && !e.altKey && e.target.tagName!=='circle'){
     // Left click on background: start potential pan — we'll decide on mouseup
     // whether it was a click or a drag based on movement distance
