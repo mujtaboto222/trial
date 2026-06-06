@@ -2421,7 +2421,8 @@ setInterval(function(){ fetch('https://mujtaba1212-ceph-landmark-detector.hf.spa
 
           // Derive Pterygomaxillare (Ptm): offset from PNS, normalized by S-N distance.
           // Calibrated from 16 cases: dx=-0.095, dy=-0.231 of S-N length.
-          // PTV is a vertical line, so dx is what matters; dy just positions the point visually.
+          // After predicting, snap horizontally to the bright posterior wall of the
+          // pterygomaxillary fissure (the radiopaque vertical edge behind the dark fissure).
           if(pts['PNS'] && pts['S'] && pts['N']){
             var sx3 = pts['S'].x * imgW, sy3 = pts['S'].y * imgH;
             var nx3 = pts['N'].x * imgW, ny3 = pts['N'].y * imgH;
@@ -2429,6 +2430,51 @@ setInterval(function(){ fetch('https://mujtaba1212-ceph-landmark-detector.hf.spa
             var pnsX = pts['PNS'].x * imgW, pnsY = pts['PNS'].y * imgH;
             var ptmX = pnsX + (-0.095 * sn3);
             var ptmY = pnsY + (-0.231 * sn3);
+
+            // Snap: search ±5mm (~0.07 of S-N) around predicted X for the strongest
+            // dark→bright transition (left-to-right brightness rise = posterior wall).
+            try {
+              var scanCv = document.createElement('canvas');
+              scanCv.width = imgW; scanCv.height = imgH;
+              var sCtx = scanCv.getContext('2d');
+              sCtx.drawImage(imgEl, 0, 0, imgW, imgH);
+
+              var searchRadius = Math.round(0.07 * sn3); // ±5mm
+              var halfH = Math.round(0.04 * sn3);
+              var cx0 = Math.round(ptmX);
+              var cy0 = Math.round(ptmY);
+              var xMin = Math.max(0, cx0 - searchRadius);
+              var xMax = Math.min(imgW - 1, cx0 + searchRadius);
+              var yMin = Math.max(0, cy0 - halfH);
+              var yMax = Math.min(imgH - 1, cy0 + halfH);
+              var w = xMax - xMin + 1;
+              var bandH = yMax - yMin + 1;
+
+              var band = sCtx.getImageData(xMin, yMin, w, bandH).data;
+
+              // Mean brightness per column
+              var cols = new Array(w);
+              for(var ix = 0; ix < w; ix++){
+                var sum = 0;
+                for(var iy = 0; iy < bandH; iy++){
+                  var p = (iy * w + ix) * 4;
+                  sum += (band[p] + band[p+1] + band[p+2]) / 3;
+                }
+                cols[ix] = sum / bandH;
+              }
+
+              // Find strongest dark→bright rise (largest positive gradient)
+              var bestIdx = -1, bestRise = 0;
+              for(var k = 1; k < w; k++){
+                var rise = cols[k] - cols[k-1];
+                if(rise > bestRise){ bestRise = rise; bestIdx = k; }
+              }
+
+              if(bestIdx !== -1){ ptmX = xMin + bestIdx; }
+            } catch(e){
+              // fall back to predicted position
+            }
+
             pts['Ptm'] = { x: ptmX / imgW, y: ptmY / imgH };
             markPlaced('Ptm');
             placed++;
