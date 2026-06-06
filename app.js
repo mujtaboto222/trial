@@ -1078,6 +1078,8 @@ function drawLines(){
 // 4 sides (R1 anterior, R2 posterior, R3 superior, R4 inferior) define a rectangle.
 // Xi sits at the geometric center. Box rotates around Xi.
 // Each side drags independently to fit the ramus.
+let rbHoverSide = null; // 'top'|'right'|'bottom'|'left' for visual highlight
+
 function rbLocalToWorld(lx, ly){
   const c = Math.cos(rickettsBox.rot), s = Math.sin(rickettsBox.rot);
   const cx = (rickettsBox.left + rickettsBox.right) / 2;
@@ -1098,12 +1100,12 @@ function rbXi(){
            y: (rickettsBox.top + rickettsBox.bottom) / 2 };
 }
 function rbRotateHandle(){
-  // Above the top side, offset in local frame
   const cx = (rickettsBox.left + rickettsBox.right) / 2;
   return rbLocalToWorld(cx, rickettsBox.top - 0.04);
 }
 
 function drawRickettsBox(){
+  const BOX_COLOR = '#ffb84d';
   const cs = rbCorners().map(p => toC(p.x, p.y));
   const xi = rbXi(); const xiC = toC(xi.x, xi.y);
 
@@ -1114,47 +1116,80 @@ function drawRickettsBox(){
     {a:2, b:3, which:'bottom', label:'R4'},
     {a:3, b:0, which:'left',   label:'R1'},
   ];
-  sides.forEach(sp => {
-    // Visible thin dashed line
+
+  sides.forEach((sp, idx) => {
+    const isHover = rbHoverSide === sp.which;
+
+    // Visible line — bolder + brighter on hover
     svg.appendChild(mkEl('line', {
-      x1:cs[sp.a].x, y1:cs[sp.a].y, x2:cs[sp.b].x, y2:cs[sp.b].y,
-      stroke:'#ff66cc', 'stroke-width':0.8, 'stroke-dasharray':'3 4',
-      opacity:0.45, 'pointer-events':'none'
+      x1: cs[sp.a].x, y1: cs[sp.a].y, x2: cs[sp.b].x, y2: cs[sp.b].y,
+      stroke: BOX_COLOR,
+      'stroke-width': isHover ? 1.8 : 1.2,
+      'stroke-dasharray': '5 4',
+      opacity: isHover ? 0.95 : 0.65,
+      'pointer-events': 'none'
     }));
-    // Wide invisible hit zone for dragging
+
+    // Wide invisible hit zone for dragging.
+    // pointer-events:stroke makes invisible strokes still receive events.
     const hit = mkEl('line', {
-      x1:cs[sp.a].x, y1:cs[sp.a].y, x2:cs[sp.b].x, y2:cs[sp.b].y,
-      stroke:'rgba(0,0,0,0)', 'stroke-width':16, cursor:'move'
+      x1: cs[sp.a].x, y1: cs[sp.a].y, x2: cs[sp.b].x, y2: cs[sp.b].y,
+      stroke: 'transparent',
+      'stroke-width': 18,
+      cursor: 'move',
+      'pointer-events': 'stroke'
     });
     hit.addEventListener('mousedown', e => {
       e.stopPropagation();
       rickettsBoxDrag = { which: sp.which, startBox: {...rickettsBox} };
     });
+    hit.addEventListener('mouseenter', () => { rbHoverSide = sp.which; renderOvl(); });
+    hit.addEventListener('mouseleave', () => { rbHoverSide = null; renderOvl(); });
     svg.appendChild(hit);
-    // Side label
-    const mx = (cs[sp.a].x + cs[sp.b].x)/2;
-    const my = (cs[sp.a].y + cs[sp.b].y)/2;
+
+    // Midpoint handle — small open circle, grows + fills on hover
+    const mx = (cs[sp.a].x + cs[sp.b].x) / 2;
+    const my = (cs[sp.a].y + cs[sp.b].y) / 2;
+    svg.appendChild(mkEl('circle', {
+      cx: mx, cy: my,
+      r: isHover ? 5 : 3.5,
+      fill: isHover ? BOX_COLOR : '#0a0e17',
+      stroke: BOX_COLOR,
+      'stroke-width': 1.5,
+      opacity: isHover ? 1 : 0.85,
+      'pointer-events': 'none'
+    }));
+
+    // R-label outside the box
     const dx = mx - xiC.x, dy = my - xiC.y;
     const len = Math.hypot(dx, dy) || 1;
-    const off = 14;
+    const off = 18;
     const lx = mx + (dx/len)*off, ly = my + (dy/len)*off + 1;
-    svg.appendChild(mkEl('text', {
-      x:lx, y:ly, fill:'#ff66cc', 'font-size':9, 'font-weight':900,
-      'text-anchor':'middle', 'dominant-baseline':'middle', opacity:0.6,
-      'pointer-events':'none'
-    })).textContent = sp.label;
+    const txt = mkEl('text', {
+      x: lx, y: ly,
+      fill: BOX_COLOR,
+      'font-size': 9,
+      'font-weight': 900,
+      'text-anchor': 'middle',
+      'dominant-baseline': 'middle',
+      opacity: 0.75,
+      'pointer-events': 'none'
+    });
+    txt.textContent = sp.label;
+    svg.appendChild(txt);
   });
 
-  // Rotate handle (orange, pivots around Xi)
+  // Rotate handle (pivots around Xi)
   const rh = rbRotateHandle(); const rhC = toC(rh.x, rh.y);
   svg.appendChild(mkEl('line', {
-    x1:xiC.x, y1:xiC.y, x2:rhC.x, y2:rhC.y,
-    stroke:'#f0883e', 'stroke-width':1, 'stroke-dasharray':'3 3',
-    opacity:0.5, 'pointer-events':'none'
+    x1: xiC.x, y1: xiC.y, x2: rhC.x, y2: rhC.y,
+    stroke: '#f0883e', 'stroke-width': 1, 'stroke-dasharray': '3 3',
+    opacity: 0.5, 'pointer-events': 'none'
   }));
   const rhEl = mkEl('circle', {
-    cx:rhC.x, cy:rhC.y, r:6,
-    fill:'rgba(240,136,62,0.2)', stroke:'#f0883e', 'stroke-width':2, cursor:'grab'
+    cx: rhC.x, cy: rhC.y, r: 6,
+    fill: 'rgba(240,136,62,0.2)', stroke: '#f0883e', 'stroke-width': 2,
+    cursor: 'grab', 'pointer-events': 'all'
   });
   rhEl.addEventListener('mousedown', e => {
     e.stopPropagation();
@@ -1162,7 +1197,7 @@ function drawRickettsBox(){
   });
   svg.appendChild(rhEl);
   svg.appendChild(mkEl('circle', {
-    cx:rhC.x, cy:rhC.y, r:2, fill:'#f0883e', 'pointer-events':'none'
+    cx: rhC.x, cy: rhC.y, r: 2, fill: '#f0883e', 'pointer-events': 'none'
   }));
 }
 
@@ -1170,7 +1205,6 @@ function drawRickettsBox(){
 function syncXiFromBox(){
   if(!rickettsBox) return;
   const c = rbXi();
-  // Xi position in world (already rotated); pts.Xi stores world coords
   const w = rbLocalToWorld(c.x, c.y);
   pts['Xi'] = { x: w.x, y: w.y };
 }
