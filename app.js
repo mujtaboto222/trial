@@ -568,6 +568,11 @@ const MAG_ICON = '<svg class="tb-icon" width="13" height="13" viewBox="0 0 24 24
 let pts={},activeLm=null,dragging=null;
 // Occlusal plane: straight line with 2 normalised-coord handles
 let occPlane = null;   // {p1:{x,y}, p2:{x,y}}
+
+// Ricketts Xi-box: 4 sides (R1-R4) + rotation defining the ramus rectangle.
+// Coords in image-fractional (0..1). null when not in Ricketts mode.
+let rickettsBox = null; // {left, right, top, bottom, rot}
+let rickettsBoxDrag = null; // {which: 'side-top'|'side-right'|..., startBox, startMouse}
 let draggingOcc = null; // 'p1'|'p2' when dragging an occ handle
 
 // ── Undo history ──────────────────────────────
@@ -993,6 +998,11 @@ function renderOvl(){
     lbl.textContent='Occ. Plane'; svg.appendChild(lbl);
   }
 
+  // ── Ricketts Xi-box (only in Ricketts mode) ────
+  if(currentMode === 'ricketts' && rickettsBox){
+    drawRickettsBox();
+  }
+
   // ── Landmarks ─────────────────────────────────
   LM.forEach(lm=>{
     if(!pts[lm.id])return;
@@ -1053,6 +1063,116 @@ function drawLines(){
   // ── Occlusal contacts (dotted, gold) ──────────
   ln('U6','L6', '#e8c06c',1,[3,3]);      // molar contact
   ln('U4','L4', '#e8c06c',1,[3,3]);      // premolar contact
+
+  // ── Ricketts-specific (only in Ricketts mode) ──
+  if(currentMode === 'ricketts'){
+    ln('Ba','N',    '#ff66cc',1,[4,3]);   // Ba-N (facial axis reference)
+    ln('Ptm','Gn',  '#ff66cc',1,[4,3]);   // Pt-Gn (facial axis)
+    ln('DC','Xi',   '#ff66cc',1,[4,3]);   // condyle axis
+    ln('Xi','PM',   '#ff66cc',1,[4,3]);   // corpus axis
+    ln('Xi','ANS',  '#ff66cc',1,[4,3]);   // lower face line
+  }
+}
+
+// ── Ricketts Xi-box ──
+// 4 sides (R1 anterior, R2 posterior, R3 superior, R4 inferior) define a rectangle.
+// Xi sits at the geometric center. Box rotates around Xi.
+// Each side drags independently to fit the ramus.
+function rbLocalToWorld(lx, ly){
+  const c = Math.cos(rickettsBox.rot), s = Math.sin(rickettsBox.rot);
+  const cx = (rickettsBox.left + rickettsBox.right) / 2;
+  const cy = (rickettsBox.top + rickettsBox.bottom) / 2;
+  return { x: cx + (lx - cx)*c - (ly - cy)*s,
+           y: cy + (lx - cx)*s + (ly - cy)*c };
+}
+function rbCorners(){
+  return [
+    rbLocalToWorld(rickettsBox.left,  rickettsBox.top),    // TL
+    rbLocalToWorld(rickettsBox.right, rickettsBox.top),    // TR
+    rbLocalToWorld(rickettsBox.right, rickettsBox.bottom), // BR
+    rbLocalToWorld(rickettsBox.left,  rickettsBox.bottom), // BL
+  ];
+}
+function rbXi(){
+  return { x: (rickettsBox.left + rickettsBox.right) / 2,
+           y: (rickettsBox.top + rickettsBox.bottom) / 2 };
+}
+function rbRotateHandle(){
+  // Above the top side, offset in local frame
+  const cx = (rickettsBox.left + rickettsBox.right) / 2;
+  return rbLocalToWorld(cx, rickettsBox.top - 0.04);
+}
+
+function drawRickettsBox(){
+  const cs = rbCorners().map(p => toC(p.x, p.y));
+  const xi = rbXi(); const xiC = toC(xi.x, xi.y);
+
+  // 4 sides: top=R3, right=R2, bottom=R4, left=R1
+  const sides = [
+    {a:0, b:1, which:'top',    label:'R3'},
+    {a:1, b:2, which:'right',  label:'R2'},
+    {a:2, b:3, which:'bottom', label:'R4'},
+    {a:3, b:0, which:'left',   label:'R1'},
+  ];
+  sides.forEach(sp => {
+    // Visible thin dashed line
+    svg.appendChild(mkEl('line', {
+      x1:cs[sp.a].x, y1:cs[sp.a].y, x2:cs[sp.b].x, y2:cs[sp.b].y,
+      stroke:'#ff66cc', 'stroke-width':0.8, 'stroke-dasharray':'3 4',
+      opacity:0.45, 'pointer-events':'none'
+    }));
+    // Wide invisible hit zone for dragging
+    const hit = mkEl('line', {
+      x1:cs[sp.a].x, y1:cs[sp.a].y, x2:cs[sp.b].x, y2:cs[sp.b].y,
+      stroke:'rgba(0,0,0,0)', 'stroke-width':16, cursor:'move'
+    });
+    hit.addEventListener('mousedown', e => {
+      e.stopPropagation();
+      rickettsBoxDrag = { which: sp.which, startBox: {...rickettsBox} };
+    });
+    svg.appendChild(hit);
+    // Side label
+    const mx = (cs[sp.a].x + cs[sp.b].x)/2;
+    const my = (cs[sp.a].y + cs[sp.b].y)/2;
+    const dx = mx - xiC.x, dy = my - xiC.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const off = 14;
+    const lx = mx + (dx/len)*off, ly = my + (dy/len)*off + 1;
+    svg.appendChild(mkEl('text', {
+      x:lx, y:ly, fill:'#ff66cc', 'font-size':9, 'font-weight':900,
+      'text-anchor':'middle', 'dominant-baseline':'middle', opacity:0.6,
+      'pointer-events':'none'
+    })).textContent = sp.label;
+  });
+
+  // Rotate handle (orange, pivots around Xi)
+  const rh = rbRotateHandle(); const rhC = toC(rh.x, rh.y);
+  svg.appendChild(mkEl('line', {
+    x1:xiC.x, y1:xiC.y, x2:rhC.x, y2:rhC.y,
+    stroke:'#f0883e', 'stroke-width':1, 'stroke-dasharray':'3 3',
+    opacity:0.5, 'pointer-events':'none'
+  }));
+  const rhEl = mkEl('circle', {
+    cx:rhC.x, cy:rhC.y, r:6,
+    fill:'rgba(240,136,62,0.2)', stroke:'#f0883e', 'stroke-width':2, cursor:'grab'
+  });
+  rhEl.addEventListener('mousedown', e => {
+    e.stopPropagation();
+    rickettsBoxDrag = { which: 'rotate', startBox: {...rickettsBox} };
+  });
+  svg.appendChild(rhEl);
+  svg.appendChild(mkEl('circle', {
+    cx:rhC.x, cy:rhC.y, r:2, fill:'#f0883e', 'pointer-events':'none'
+  }));
+}
+
+// Update Xi landmark from the box's geometric center
+function syncXiFromBox(){
+  if(!rickettsBox) return;
+  const c = rbXi();
+  // Xi position in world (already rotated); pts.Xi stores world coords
+  const w = rbLocalToWorld(c.x, c.y);
+  pts['Xi'] = { x: w.x, y: w.y };
 }
 
 
@@ -1135,6 +1255,30 @@ window.addEventListener('mousemove',e=>{
     pts[dragging]={x:Math.max(0,Math.min(1,n.x)),y:Math.max(0,Math.min(1,n.y))};
     drawImg();renderOvl();
     if(showMag)drawMag(e.clientX-r.left,e.clientY-r.top);
+  } else if(rickettsBoxDrag && rickettsBox){
+    // Drag a side or rotate the box
+    const r=svg.getBoundingClientRect();
+    const n=toN(e.clientX-r.left,e.clientY-r.top);
+    const sb = rickettsBoxDrag.startBox;
+    if(rickettsBoxDrag.which === 'rotate'){
+      // Pivot around Xi (rectangle center)
+      const cx = (sb.left + sb.right) / 2, cy = (sb.top + sb.bottom) / 2;
+      const ang = Math.atan2(n.y - cy, n.x - cx);
+      rickettsBox.rot = ang + Math.PI/2;
+    } else {
+      // Convert mouse to box-local frame using starting rotation
+      const c = Math.cos(sb.rot), s = Math.sin(sb.rot);
+      const cx = (sb.left + sb.right) / 2, cy = (sb.top + sb.bottom) / 2;
+      const lx = (n.x - cx)*c + (n.y - cy)*s + cx;
+      const ly = -(n.x - cx)*s + (n.y - cy)*c + cy;
+      const margin = 0.005;
+      if(rickettsBoxDrag.which === 'top')    rickettsBox.top    = Math.min(ly, sb.bottom - margin);
+      if(rickettsBoxDrag.which === 'bottom') rickettsBox.bottom = Math.max(ly, sb.top + margin);
+      if(rickettsBoxDrag.which === 'left')   rickettsBox.left   = Math.min(lx, sb.right - margin);
+      if(rickettsBoxDrag.which === 'right')  rickettsBox.right  = Math.max(lx, sb.left + margin);
+    }
+    syncXiFromBox();
+    drawImg(); renderOvl();
   } else if(draggingOcc && occPlane){
     const r=svg.getBoundingClientRect();
     const n=toN(e.clientX-r.left,e.clientY-r.top);
@@ -1155,6 +1299,7 @@ window.addEventListener('mousemove',e=>{
 window.addEventListener('mouseup',e=>{
   if(_lastPointerType !== 'mouse') return;
   if(dragging){ snapState(); dragging=null; svg.style.cursor='crosshair'; }
+  if(rickettsBoxDrag){ snapState(); rickettsBoxDrag=null; }
   if(draggingOcc){ snapState(); draggingOcc=null; svg.style.cursor='crosshair'; occPlaneManual=true; }
   if(isPanning){
     svg.style.cursor='crosshair';
@@ -1504,11 +1649,36 @@ modeMenu.querySelectorAll('.mode-item').forEach(item => {
 
     // Initialise Ricketts construction points (Xi, DC) when entering Ricketts mode
     if(currentMode === 'ricketts'){
-      // Xi initial: centroid of Ar, Co, Go (user can drag to refine)
-      if(!pts['Xi'] && pts['Ar'] && pts['Co'] && pts['Go']){
+      // Xi via calibrated box: 4 sides (R1-R4) placed at average offsets from Ar.
+      // Calibrated from 17 cases (normalised by S-N length):
+      //   R1 (anterior):  dx=+0.521, dy=+0.207
+      //   R2 (posterior): dx=+0.098, dy=+0.273
+      //   R3 (superior):  dx=+0.274, dy=-0.016
+      //   R4 (inferior):  dx=+0.420, dy=+0.742
+      // Xi = center of the box formed by these 4 points.
+      if(!pts['Xi'] && pts['Ar'] && pts['S'] && pts['N']){
+        const imgW = imgEl.naturalWidth, imgH = imgEl.naturalHeight;
+        const sx = pts['S'].x*imgW, sy = pts['S'].y*imgH;
+        const nx = pts['N'].x*imgW, ny = pts['N'].y*imgH;
+        const sn = Math.hypot(nx-sx, ny-sy);
+        const arX = pts['Ar'].x*imgW, arY = pts['Ar'].y*imgH;
+        // Box extents in image pixels
+        const r1x = arX + 0.521*sn;  // right (anterior)
+        const r2x = arX + 0.098*sn;  // left  (posterior)
+        const r3y = arY + (-0.016)*sn; // top (superior)
+        const r4y = arY + 0.742*sn;    // bottom (inferior)
+        // Store the box so it can be rendered and adjusted
+        rickettsBox = {
+          left:  r2x / imgW,
+          right: r1x / imgW,
+          top:   r3y / imgH,
+          bottom:r4y / imgH,
+          rot:   0
+        };
+        // Xi sits at the box center
         pts['Xi'] = {
-          x: (pts['Ar'].x + pts['Co'].x + pts['Go'].x) / 3,
-          y: (pts['Ar'].y + pts['Co'].y + pts['Go'].y) / 3
+          x: (r1x + r2x) / 2 / imgW,
+          y: (r3y + r4y) / 2 / imgH
         };
       }
       // DC initial: projection of Co onto Ba-N line (user can drag to refine)
