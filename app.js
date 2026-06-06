@@ -11,8 +11,8 @@ const LM = [
    hint:'Intersection of the posterior ramus border with the inferior cranial base surface.'},
   {id:'Ba',  abbr:'Ba',  name:'Basion',              group:'Cranial Base',
    hint:'Most anterior-inferior point on the anterior margin of the foramen magnum, on the clivus. Auto-derived from Ar and S-N distance.'},
-  {id:'Np',  abbr:"N'",  name:'Soft Tissue Nasion',  group:'Cranial Base',
-   hint:'Soft tissue point overlying bony Nasion — deepest curve at the bridge of the nose. Auto-derived from N and S-N distance.'},
+  {id:'Ptm', abbr:'Ptm', name:'Pterygomaxillare',    group:'Cranial Base',
+   hint:'Inferior-posterior point of the pterygomaxillary fissure — defines the Pterygoid Vertical (PTV) reference plane. Auto-derived from PNS and S-N distance.'},
   {id:'ANS', abbr:'ANS', name:'Ant. Nasal Spine',    group:'Maxilla',
    hint:'Tip of the anterior nasal spine — the sharp bony point at the base of the nasal aperture, projecting forward.'},
   {id:'PNS', abbr:'PNS', name:'Post. Nasal Spine',   group:'Maxilla',
@@ -2247,7 +2247,7 @@ setInterval(function(){ fetch('https://mujtaba1212-ceph-landmark-detector.hf.spa
     var prog    = document.getElementById('ai-prog');
     var pct     = document.getElementById('ai-pct');
     var chipsEl = document.getElementById('ai-chips');
-    var lmNames = ['S','N','Or','Po','Ar','Co','A','ANS','PNS','B','Me','Pog','Gn','Go','Prn','Sn','Ls','Li',"Pog'",'Ba',"N'",'U1tip','U1ap','L1tip','L1ap','U4','U6','L4','L6'];
+    var lmNames = ['S','N','Or','Po','Ar','Co','A','ANS','PNS','B','Me','Pog','Gn','Go','Prn','Sn','Ls','Li',"Pog'",'Ba','Ptm','U1tip','U1ap','L1tip','L1ap','U4','U6','L4','L6'];
     var msgs    = ['Initialising model…','Preprocessing image…','Detecting cranial base…','Mapping skeletal points…','Locating dental landmarks…','Tracing soft tissue…','Placing landmarks…'];
     overlay.style.display = 'flex';
     chipsEl.innerHTML = '';
@@ -2419,15 +2419,18 @@ setInterval(function(){ fetch('https://mujtaba1212-ceph-landmark-detector.hf.spa
             placed++;
           }
 
-          // Derive Soft Tissue Nasion (N'): horizontal offset from N (dx only).
-          // Calibrated from 10 cases: dx=+0.095 of S-N length. Vertically aligned with N.
-          if(pts['N'] && pts['S']){
-            var sx2 = pts['S'].x * imgW, sy2 = pts['S'].y * imgH;
-            var nx2 = pts['N'].x * imgW, ny2 = pts['N'].y * imgH;
-            var sn2 = Math.hypot(nx2 - sx2, ny2 - sy2);
-            var npX = nx2 + (0.095 * sn2);
-            pts['Np'] = { x: npX / imgW, y: pts['N'].y };
-            markPlaced('Np');
+          // Derive Pterygomaxillare (Ptm): offset from PNS, normalized by S-N distance.
+          // Calibrated from 16 cases: dx=-0.095, dy=-0.231 of S-N length.
+          // PTV is a vertical line, so dx is what matters; dy just positions the point visually.
+          if(pts['PNS'] && pts['S'] && pts['N']){
+            var sx3 = pts['S'].x * imgW, sy3 = pts['S'].y * imgH;
+            var nx3 = pts['N'].x * imgW, ny3 = pts['N'].y * imgH;
+            var sn3 = Math.hypot(nx3 - sx3, ny3 - sy3);
+            var pnsX = pts['PNS'].x * imgW, pnsY = pts['PNS'].y * imgH;
+            var ptmX = pnsX + (-0.095 * sn3);
+            var ptmY = pnsY + (-0.231 * sn3);
+            pts['Ptm'] = { x: ptmX / imgW, y: ptmY / imgH };
+            markPlaced('Ptm');
             placed++;
           }
 
