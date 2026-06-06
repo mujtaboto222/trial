@@ -58,9 +58,17 @@ const LM = [
    hint:'Most anterior point of the lower lip vermillion border.'},
   {id:'Pogp',abbr:"Pog'",name:'ST Pogonion',         group:'Soft Tissue',
    hint:"Most anterior point of the soft tissue chin overlying bony Pogonion."},
+
+  // ── Ricketts-only landmarks (hidden from main list, shown only in Ricketts mode) ──
+  {id:'PM',  abbr:'PM',  name:'Suprapogonion',       group:'Ricketts', hidden:true,
+   hint:'Point on the anterior symphysis where curvature changes from concave to convex. Auto-derived from Pog.'},
+  {id:'Xi',  abbr:'Xi',  name:'Xi point',            group:'Ricketts', hidden:true,
+   hint:'Geometric center of the ramus. Initialised automatically — drag to refine if needed.'},
+  {id:'DC',  abbr:'DC',  name:'DC point',            group:'Ricketts', hidden:true,
+   hint:'Center of the condyle neck on the Ba-N plane. Initialised automatically — drag to refine if needed.'},
 ];
 
-const COLORS={'Cranial Base':'#58a6ff','Maxilla':'#3fb950','Mandible':'#f0883e','Occlusal':'#e8c06c','Soft Tissue':'#bc8cff'};
+const COLORS={'Cranial Base':'#58a6ff','Maxilla':'#3fb950','Mandible':'#f0883e','Occlusal':'#e8c06c','Soft Tissue':'#bc8cff','Ricketts':'#ff66cc'};
 const getCol=id=>COLORS[LM.find(l=>l.id===id)?.group]||'#fff';
 
 
@@ -637,15 +645,16 @@ function buildList(){
   list.innerHTML=''; // clear on reload
   let cur='';
   LM.forEach(lm=>{
+    if(lm.hidden) return;  // skip hidden landmarks (e.g. Ricketts-only)
     if(lm.group!==cur){cur=lm.group;const s=document.createElement('div');s.className='lm-sep';s.textContent=cur;list.appendChild(s);}
     const item=document.createElement('div');item.className='lm-item';item.id='lmi-'+lm.id;
     item.innerHTML=`<div class="lm-dot"></div><div class="lm-text"><span class="lm-abbr">${lm.abbr}</span><span class="lm-name">${lm.name}</span></div>`;
     item.addEventListener('click',()=>setActive(lm.id));
     list.appendChild(item);
   });
-  // Set dynamic total
+  // Set dynamic total — only count visible landmarks
   const tot=document.getElementById('prog-total');
-  if(tot) tot.textContent=LM.length;
+  if(tot) tot.textContent=LM.filter(l=>!l.hidden).length;
 }
 
 function setActive(id){
@@ -987,6 +996,8 @@ function renderOvl(){
   // ── Landmarks ─────────────────────────────────
   LM.forEach(lm=>{
     if(!pts[lm.id])return;
+    // Hidden landmarks (PM, Xi, DC) only show in Ricketts mode
+    if(lm.hidden && currentMode !== 'ricketts') return;
     const c=toC(pts[lm.id].x,pts[lm.id].y),col=getCol(lm.id);
     const isActive=(lm.id===activeLm);
     svg.appendChild(mkEl('circle',{cx:c.x,cy:c.y,r:isActive?8:6,fill:'none',stroke:col,'stroke-width':isActive?2:1.2,opacity:isActive?0.9:0.55}));
@@ -1487,8 +1498,32 @@ modeMenu.querySelectorAll('.mode-item').forEach(item => {
       currentMode === 'downs'    ? 'Downs Analysis' :
       currentMode === 'steiner'  ? 'Steiner Analysis' :
       currentMode === 'jarabak'  ? 'Jarabak Analysis' :
+      currentMode === 'ricketts' ? 'Ricketts Analysis' :
       'Eastman Analysis';
     modeMenu.classList.remove('open');
+
+    // Initialise Ricketts construction points (Xi, DC) when entering Ricketts mode
+    if(currentMode === 'ricketts'){
+      // Xi initial: centroid of Ar, Co, Go (user can drag to refine)
+      if(!pts['Xi'] && pts['Ar'] && pts['Co'] && pts['Go']){
+        pts['Xi'] = {
+          x: (pts['Ar'].x + pts['Co'].x + pts['Go'].x) / 3,
+          y: (pts['Ar'].y + pts['Co'].y + pts['Go'].y) / 3
+        };
+      }
+      // DC initial: projection of Co onto Ba-N line (user can drag to refine)
+      if(!pts['DC'] && pts['Ba'] && pts['N'] && pts['Co']){
+        const ba = pts['Ba'], n = pts['N'], co = pts['Co'];
+        const dx = n.x - ba.x, dy = n.y - ba.y;
+        const len2 = dx*dx + dy*dy;
+        const t = ((co.x - ba.x)*dx + (co.y - ba.y)*dy) / len2;
+        pts['DC'] = { x: ba.x + t*dx, y: ba.y + t*dy };
+      }
+      renderOvl();
+    } else {
+      renderOvl();
+    }
+
     // Auto re-analyse if any landmarks are placed
     if(Object.keys(pts).length > 0){
       setTimeout(function(){ document.getElementById('analyse-btn').click(); }, 50);
@@ -1529,6 +1564,8 @@ document.getElementById('analyse-btn').addEventListener('click',()=>{
       ? `<span class="mode-chip-steiner">Steiner Analysis</span>`
       : currentMode === 'jarabak'
       ? `<span class="mode-chip-jarabak">Jarabak Analysis</span>`
+      : currentMode === 'ricketts'
+      ? `<span class="mode-chip-ricketts">Ricketts Analysis</span>`
       : `<span class="mode-chip-eastman">Eastman Analysis</span>`;
   body.appendChild(modeBadge);
 
@@ -1550,6 +1587,7 @@ document.getElementById('analyse-btn').addEventListener('click',()=>{
     currentMode === 'downs'    ? MEAS_DOWNS :
     currentMode === 'steiner'  ? MEAS_STEINER :
     currentMode === 'jarabak'  ? MEAS_JARABAK :
+    currentMode === 'ricketts' ? MEAS_RICKETTS :
     MEAS;
 
   let cur = '';
@@ -1673,6 +1711,7 @@ document.getElementById('export-btn').addEventListener('click', async () => {
     currentMode === 'downs'    ? 'Downs Analysis' :
     currentMode === 'steiner'  ? 'Steiner Analysis' :
     currentMode === 'jarabak'  ? 'Jarabak Analysis' :
+    currentMode === 'ricketts' ? 'Ricketts Analysis' :
     'Eastman Analysis';
   const badgeColor =
     currentMode === 'key'      ? CLR.accent :
@@ -1680,6 +1719,7 @@ document.getElementById('export-btn').addEventListener('click', async () => {
     currentMode === 'downs'    ? CLR.warn :
     currentMode === 'steiner'  ? [80,200,120] :
     currentMode === 'jarabak'  ? [232,192,108] :
+    currentMode === 'ricketts' ? [255,102,204] :
     CLR.green;
   doc.setFontSize(7.5);
   doc.setFont('helvetica','bold');
@@ -1887,6 +1927,7 @@ document.getElementById('export-btn').addEventListener('click', async () => {
     currentMode === 'downs'    ? MEAS_DOWNS :
     currentMode === 'steiner'  ? MEAS_STEINER :
     currentMode === 'jarabak'  ? MEAS_JARABAK :
+    currentMode === 'ricketts' ? MEAS_RICKETTS :
     MEAS;
 
   let curS = '';
@@ -2247,7 +2288,7 @@ setInterval(function(){ fetch('https://mujtaba1212-ceph-landmark-detector.hf.spa
     var prog    = document.getElementById('ai-prog');
     var pct     = document.getElementById('ai-pct');
     var chipsEl = document.getElementById('ai-chips');
-    var lmNames = ['S','N','Or','Po','Ar','Co','A','ANS','PNS','B','Me','Pog','Gn','Go','Prn','Sn','Ls','Li',"Pog'",'Ba','Ptm','U1tip','U1ap','L1tip','L1ap','U4','U6','L4','L6'];
+    var lmNames = ['S','N','Or','Po','Ar','Co','A','ANS','PNS','B','Me','Pog','Gn','Go','Prn','Sn','Ls','Li',"Pog'",'Ba','Ptm','PM','U1tip','U1ap','L1tip','L1ap','U4','U6','L4','L6'];
     var msgs    = ['Initialising model…','Preprocessing image…','Detecting cranial base…','Mapping skeletal points…','Locating dental landmarks…','Tracing soft tissue…','Placing landmarks…'];
     overlay.style.display = 'flex';
     chipsEl.innerHTML = '';
@@ -2477,6 +2518,20 @@ setInterval(function(){ fetch('https://mujtaba1212-ceph-landmark-detector.hf.spa
 
             pts['Ptm'] = { x: ptmX / imgW, y: ptmY / imgH };
             markPlaced('Ptm');
+            placed++;
+          }
+
+          // Derive Suprapogonion (PM): offset from Pog, normalized by S-N distance.
+          // Calibrated from 12 cases: dx=-0.011, dy=-0.068 of S-N length.
+          // Hidden until Ricketts analysis is selected.
+          if(pts['Pog'] && pts['S'] && pts['N']){
+            var sx4 = pts['S'].x * imgW, sy4 = pts['S'].y * imgH;
+            var nx4 = pts['N'].x * imgW, ny4 = pts['N'].y * imgH;
+            var sn4 = Math.hypot(nx4 - sx4, ny4 - sy4);
+            var pogX = pts['Pog'].x * imgW, pogY = pts['Pog'].y * imgH;
+            var pmX = pogX + (-0.011 * sn4);
+            var pmY = pogY + (-0.068 * sn4);
+            pts['PM'] = { x: pmX / imgW, y: pmY / imgH };
             placed++;
           }
 
