@@ -1130,12 +1130,12 @@ function drawRickettsBox(){
       'pointer-events': 'none'
     }));
 
-    // Wide invisible hit zone for dragging.
-    // pointer-events:stroke makes invisible strokes still receive events.
+    // Wide hit zone for dragging. Use a barely-visible stroke (not 'transparent')
+    // so SVG pointer events fire reliably across browsers.
     const hit = mkEl('line', {
       x1: cs[sp.a].x, y1: cs[sp.a].y, x2: cs[sp.b].x, y2: cs[sp.b].y,
-      stroke: 'transparent',
-      'stroke-width': 18,
+      stroke: 'rgba(255,184,77,0.001)',
+      'stroke-width': 22,
       cursor: 'move',
       'pointer-events': 'stroke'
     });
@@ -1266,6 +1266,8 @@ svg.addEventListener('mousedown',e=>{
     isPanning=true;panStart={x:e.clientX,y:e.clientY};panOrigin={x:panX,y:panY};svg.style.cursor='grabbing';
     return;
   }
+  // Don't start pan if clicking on a draggable element (landmark circles or box drag zones)
+  if(rickettsBoxDrag) return; // box drag was just set by child element's handler
   if(e.button===0 && !e.altKey && e.target.tagName!=='circle'){
     // Left click on background: start potential pan — we'll decide on mouseup
     // whether it was a click or a drag based on movement distance
