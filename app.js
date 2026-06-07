@@ -9,10 +9,6 @@ const LM = [
    hint:'Uppermost point of the external auditory meatus (top of the ear canal opening).'},
   {id:'Ar',  abbr:'Ar',  name:'Articulare',          group:'Cranial Base',
    hint:'Intersection of the posterior ramus border with the inferior cranial base surface.'},
-  {id:'Ba',  abbr:'Ba',  name:'Basion',              group:'Cranial Base',
-   hint:'Most anterior-inferior point on the anterior margin of the foramen magnum, on the clivus. Auto-derived from Ar and S-N distance.'},
-  {id:'Ptm', abbr:'Ptm', name:'Pterygomaxillare',    group:'Cranial Base',
-   hint:'Inferior-posterior point of the pterygomaxillary fissure — defines the Pterygoid Vertical (PTV) reference plane. Auto-derived from PNS and S-N distance.'},
   {id:'ANS', abbr:'ANS', name:'Ant. Nasal Spine',    group:'Maxilla',
    hint:'Tip of the anterior nasal spine — the sharp bony point at the base of the nasal aperture, projecting forward.'},
   {id:'PNS', abbr:'PNS', name:'Post. Nasal Spine',   group:'Maxilla',
@@ -48,6 +44,8 @@ const LM = [
    hint:'Cusp tip of the upper first premolar. Used with U6, L6, L4 to define the functional occlusal plane.'},
   {id:'L4',  abbr:'L4',  name:'Lower Premolar (cusp tip)',group:'Occlusal',
    hint:'Cusp tip of the lower first premolar. Used with U6, L6, U4 to define the functional occlusal plane.'},
+  {id:'Np',  abbr:"N'",  name:'ST Nasion',            group:'Soft Tissue',
+   hint:'Most anterior point of the soft tissue overlying Nasion (the bridge of the nose).'},
   {id:'Sn',  abbr:'Sn',  name:'Subnasale',           group:'Soft Tissue',
    hint:'Junction of the columella base and the upper lip — base of the nose, not the nose tip.'},
   {id:'Prn', abbr:'Prn', name:'Pronasale',           group:'Soft Tissue',
@@ -58,17 +56,9 @@ const LM = [
    hint:'Most anterior point of the lower lip vermillion border.'},
   {id:'Pogp',abbr:"Pog'",name:'ST Pogonion',         group:'Soft Tissue',
    hint:"Most anterior point of the soft tissue chin overlying bony Pogonion."},
-
-  // ── Ricketts-only landmarks (hidden from main list, shown only in Ricketts mode) ──
-  {id:'PM',  abbr:'PM',  name:'Suprapogonion',       group:'Ricketts', hidden:true,
-   hint:'Point on the anterior symphysis where curvature changes from concave to convex. Auto-derived from Pog.'},
-  {id:'Xi',  abbr:'Xi',  name:'Xi point',            group:'Ricketts', hidden:true,
-   hint:'Geometric center of the ramus. Initialised automatically — drag to refine if needed.'},
-  {id:'DC',  abbr:'DC',  name:'DC point',            group:'Ricketts', hidden:true,
-   hint:'Center of the condyle neck on the Ba-N plane. Initialised automatically — drag to refine if needed.'},
 ];
 
-const COLORS={'Cranial Base':'#58a6ff','Maxilla':'#3fb950','Mandible':'#f0883e','Occlusal':'#e8c06c','Soft Tissue':'#bc8cff','Ricketts':'#ff66cc'};
+const COLORS={'Cranial Base':'#58a6ff','Maxilla':'#3fb950','Mandible':'#f0883e','Occlusal':'#e8c06c','Soft Tissue':'#bc8cff'};
 const getCol=id=>COLORS[LM.find(l=>l.id===id)?.group]||'#fff';
 
 
@@ -568,11 +558,6 @@ const MAG_ICON = '<svg class="tb-icon" width="13" height="13" viewBox="0 0 24 24
 let pts={},activeLm=null,dragging=null;
 // Occlusal plane: straight line with 2 normalised-coord handles
 let occPlane = null;   // {p1:{x,y}, p2:{x,y}}
-
-// Ricketts Xi-box: 4 sides (R1-R4) + rotation defining the ramus rectangle.
-// Coords in image-fractional (0..1). null when not in Ricketts mode.
-let rickettsBox = null; // {left, right, top, bottom, rot}
-let rickettsBoxDrag = null; // {which: 'side-top'|'side-right'|..., startBox, startMouse}
 let draggingOcc = null; // 'p1'|'p2' when dragging an occ handle
 
 // ── Undo history ──────────────────────────────
@@ -650,16 +635,15 @@ function buildList(){
   list.innerHTML=''; // clear on reload
   let cur='';
   LM.forEach(lm=>{
-    if(lm.hidden) return;  // skip hidden landmarks (e.g. Ricketts-only)
     if(lm.group!==cur){cur=lm.group;const s=document.createElement('div');s.className='lm-sep';s.textContent=cur;list.appendChild(s);}
     const item=document.createElement('div');item.className='lm-item';item.id='lmi-'+lm.id;
     item.innerHTML=`<div class="lm-dot"></div><div class="lm-text"><span class="lm-abbr">${lm.abbr}</span><span class="lm-name">${lm.name}</span></div>`;
     item.addEventListener('click',()=>setActive(lm.id));
     list.appendChild(item);
   });
-  // Set dynamic total — only count visible landmarks
+  // Set dynamic total
   const tot=document.getElementById('prog-total');
-  if(tot) tot.textContent=LM.filter(l=>!l.hidden).length;
+  if(tot) tot.textContent=LM.length;
 }
 
 function setActive(id){
@@ -795,8 +779,6 @@ function loadImg(file){
       };
       document.getElementById('analyse-btn').disabled = false;
       setActive(LM[0].id);
-      // Auto-start AI detection as soon as the image is ready
-      document.getElementById('ai-detect-btn').click();
     };
     imgEl.src = ev.target.result;
   };
@@ -998,16 +980,9 @@ function renderOvl(){
     lbl.textContent='Occ. Plane'; svg.appendChild(lbl);
   }
 
-  // ── Ricketts Xi-box (only in Ricketts mode) ────
-  if(currentMode === 'ricketts' && rickettsBox){
-    drawRickettsBox();
-  }
-
   // ── Landmarks ─────────────────────────────────
   LM.forEach(lm=>{
     if(!pts[lm.id])return;
-    // Hidden landmarks (PM, Xi, DC) only show in Ricketts mode
-    if(lm.hidden && currentMode !== 'ricketts') return;
     const c=toC(pts[lm.id].x,pts[lm.id].y),col=getCol(lm.id);
     const isActive=(lm.id===activeLm);
     svg.appendChild(mkEl('circle',{cx:c.x,cy:c.y,r:isActive?8:6,fill:'none',stroke:col,'stroke-width':isActive?2:1.2,opacity:isActive?0.9:0.55}));
@@ -1063,140 +1038,6 @@ function drawLines(){
   // ── Occlusal contacts (dotted, gold) ──────────
   ln('U6','L6', '#e8c06c',1,[3,3]);      // molar contact
   ln('U4','L4', '#e8c06c',1,[3,3]);      // premolar contact
-
-  // ── Ricketts-specific (only in Ricketts mode) ──
-  if(currentMode === 'ricketts'){
-    ln('Ba','N',    '#ff66cc',1,[4,3]);   // Ba-N (facial axis reference)
-    ln('Ptm','Gn',  '#ff66cc',1,[4,3]);   // Pt-Gn (facial axis)
-    ln('DC','Xi',   '#ff66cc',1,[4,3]);   // condyle axis
-    ln('Xi','PM',   '#ff66cc',1,[4,3]);   // corpus axis
-    ln('Xi','ANS',  '#ff66cc',1,[4,3]);   // lower face line
-  }
-}
-
-// ── Ricketts Xi-box ──
-// 4 sides (R1 anterior, R2 posterior, R3 superior, R4 inferior) define a rectangle.
-// Xi sits at the geometric center. Box rotates around Xi.
-// Each side drags independently to fit the ramus.
-let rbHoverSide = null; // 'top'|'right'|'bottom'|'left' for visual highlight
-
-function rbLocalToWorld(lx, ly){
-  const c = Math.cos(rickettsBox.rot), s = Math.sin(rickettsBox.rot);
-  const cx = (rickettsBox.left + rickettsBox.right) / 2;
-  const cy = (rickettsBox.top + rickettsBox.bottom) / 2;
-  return { x: cx + (lx - cx)*c - (ly - cy)*s,
-           y: cy + (lx - cx)*s + (ly - cy)*c };
-}
-function rbCorners(){
-  return [
-    rbLocalToWorld(rickettsBox.left,  rickettsBox.top),    // TL
-    rbLocalToWorld(rickettsBox.right, rickettsBox.top),    // TR
-    rbLocalToWorld(rickettsBox.right, rickettsBox.bottom), // BR
-    rbLocalToWorld(rickettsBox.left,  rickettsBox.bottom), // BL
-  ];
-}
-function rbXi(){
-  return { x: (rickettsBox.left + rickettsBox.right) / 2,
-           y: (rickettsBox.top + rickettsBox.bottom) / 2 };
-}
-function rbRotateHandle(){
-  const cx = (rickettsBox.left + rickettsBox.right) / 2;
-  return rbLocalToWorld(cx, rickettsBox.top - 0.04);
-}
-
-function drawRickettsBox(){
-  const BOX_COLOR = '#ffb84d';
-  const cs = rbCorners().map(p => toC(p.x, p.y));
-  const xi = rbXi(); const xiC = toC(xi.x, xi.y);
-
-  // 4 sides: top=R3, right=R2, bottom=R4, left=R1
-  const sides = [
-    {a:0, b:1, which:'top',    label:'R3'},
-    {a:1, b:2, which:'right',  label:'R2'},
-    {a:2, b:3, which:'bottom', label:'R4'},
-    {a:3, b:0, which:'left',   label:'R1'},
-  ];
-
-  sides.forEach((sp, idx) => {
-    const isHover = rbHoverSide === sp.which;
-
-    // Visible line — bolder + brighter on hover
-    svg.appendChild(mkEl('line', {
-      x1: cs[sp.a].x, y1: cs[sp.a].y, x2: cs[sp.b].x, y2: cs[sp.b].y,
-      stroke: BOX_COLOR,
-      'stroke-width': isHover ? 1.8 : 1.2,
-      'stroke-dasharray': '5 4',
-      opacity: isHover ? 0.95 : 0.65,
-      'pointer-events': 'none'
-    }));
-
-    // Wide hit zone for dragging. Use a barely-visible stroke (not 'transparent')
-    // so SVG pointer events fire reliably across browsers.
-    // NOTE: Hit-testing is now done via proximity in svg.mousedown, but we keep
-    // an invisible element here so the cursor shows 'move' on hover.
-    svg.appendChild(mkEl('line', {
-      x1: cs[sp.a].x, y1: cs[sp.a].y, x2: cs[sp.b].x, y2: cs[sp.b].y,
-      stroke: 'rgba(255,184,77,0.001)',
-      'stroke-width': 22,
-      cursor: 'move',
-      'pointer-events': 'stroke'
-    }));
-
-    // Midpoint handle — small open circle, grows + fills on hover
-    const mx = (cs[sp.a].x + cs[sp.b].x) / 2;
-    const my = (cs[sp.a].y + cs[sp.b].y) / 2;
-    svg.appendChild(mkEl('circle', {
-      cx: mx, cy: my,
-      r: isHover ? 5 : 3.5,
-      fill: isHover ? BOX_COLOR : '#0a0e17',
-      stroke: BOX_COLOR,
-      'stroke-width': 1.5,
-      opacity: isHover ? 1 : 0.85,
-      'pointer-events': 'none'
-    }));
-
-    // R-label outside the box
-    const dx = mx - xiC.x, dy = my - xiC.y;
-    const len = Math.hypot(dx, dy) || 1;
-    const off = 18;
-    const lx = mx + (dx/len)*off, ly = my + (dy/len)*off + 1;
-    const txt = mkEl('text', {
-      x: lx, y: ly,
-      fill: BOX_COLOR,
-      'font-size': 9,
-      'font-weight': 900,
-      'text-anchor': 'middle',
-      'dominant-baseline': 'middle',
-      opacity: 0.75,
-      'pointer-events': 'none'
-    });
-    txt.textContent = sp.label;
-    svg.appendChild(txt);
-  });
-
-  // Rotate handle (pivots around Xi)
-  const rh = rbRotateHandle(); const rhC = toC(rh.x, rh.y);
-  svg.appendChild(mkEl('line', {
-    x1: xiC.x, y1: xiC.y, x2: rhC.x, y2: rhC.y,
-    stroke: '#f0883e', 'stroke-width': 1, 'stroke-dasharray': '3 3',
-    opacity: 0.5, 'pointer-events': 'none'
-  }));
-  svg.appendChild(mkEl('circle', {
-    cx: rhC.x, cy: rhC.y, r: 6,
-    fill: 'rgba(240,136,62,0.2)', stroke: '#f0883e', 'stroke-width': 2,
-    cursor: 'grab', 'pointer-events': 'all'
-  }));
-  svg.appendChild(mkEl('circle', {
-    cx: rhC.x, cy: rhC.y, r: 2, fill: '#f0883e', 'pointer-events': 'none'
-  }));
-}
-
-// Update Xi landmark from the box's geometric center
-function syncXiFromBox(){
-  if(!rickettsBox) return;
-  const c = rbXi();
-  const w = rbLocalToWorld(c.x, c.y);
-  pts['Xi'] = { x: w.x, y: w.y };
 }
 
 
@@ -1256,47 +1097,6 @@ svg.addEventListener('mousedown',e=>{
     isPanning=true;panStart={x:e.clientX,y:e.clientY};panOrigin={x:panX,y:panY};svg.style.cursor='grabbing';
     return;
   }
-
-  // Ricketts box drag — check proximity to each side / rotate handle
-  if(e.button===0 && !e.altKey && currentMode === 'ricketts' && rickettsBox){
-    const r = svg.getBoundingClientRect();
-    const mx = e.clientX - r.left, my = e.clientY - r.top;
-
-    // Check rotate handle first (small target, higher priority)
-    const rh = rbRotateHandle();
-    const rhC = toC(rh.x, rh.y);
-    if(Math.hypot(mx - rhC.x, my - rhC.y) < 12){
-      rickettsBoxDrag = { which: 'rotate', startBox: {...rickettsBox} };
-      e.stopPropagation();
-      return;
-    }
-
-    // Check each side
-    const cs = rbCorners().map(p => toC(p.x, p.y));
-    const sides = [
-      {a:0, b:1, which:'top'},
-      {a:1, b:2, which:'right'},
-      {a:2, b:3, which:'bottom'},
-      {a:3, b:0, which:'left'},
-    ];
-    const HIT_DIST = 10; // pixels from line
-    for(const sp of sides){
-      const A = cs[sp.a], B = cs[sp.b];
-      // Distance from (mx,my) to segment AB
-      const dx = B.x - A.x, dy = B.y - A.y;
-      const len2 = dx*dx + dy*dy;
-      let t = ((mx - A.x)*dx + (my - A.y)*dy) / len2;
-      t = Math.max(0, Math.min(1, t));
-      const px = A.x + t*dx, py = A.y + t*dy;
-      const dist = Math.hypot(mx - px, my - py);
-      if(dist < HIT_DIST){
-        rickettsBoxDrag = { which: sp.which, startBox: {...rickettsBox} };
-        e.stopPropagation();
-        return;
-      }
-    }
-  }
-
   if(e.button===0 && !e.altKey && e.target.tagName!=='circle'){
     // Left click on background: start potential pan — we'll decide on mouseup
     // whether it was a click or a drag based on movement distance
@@ -1320,30 +1120,6 @@ window.addEventListener('mousemove',e=>{
     pts[dragging]={x:Math.max(0,Math.min(1,n.x)),y:Math.max(0,Math.min(1,n.y))};
     drawImg();renderOvl();
     if(showMag)drawMag(e.clientX-r.left,e.clientY-r.top);
-  } else if(rickettsBoxDrag && rickettsBox){
-    // Drag a side or rotate the box
-    const r=svg.getBoundingClientRect();
-    const n=toN(e.clientX-r.left,e.clientY-r.top);
-    const sb = rickettsBoxDrag.startBox;
-    if(rickettsBoxDrag.which === 'rotate'){
-      // Pivot around Xi (rectangle center)
-      const cx = (sb.left + sb.right) / 2, cy = (sb.top + sb.bottom) / 2;
-      const ang = Math.atan2(n.y - cy, n.x - cx);
-      rickettsBox.rot = ang + Math.PI/2;
-    } else {
-      // Convert mouse to box-local frame using starting rotation
-      const c = Math.cos(sb.rot), s = Math.sin(sb.rot);
-      const cx = (sb.left + sb.right) / 2, cy = (sb.top + sb.bottom) / 2;
-      const lx = (n.x - cx)*c + (n.y - cy)*s + cx;
-      const ly = -(n.x - cx)*s + (n.y - cy)*c + cy;
-      const margin = 0.005;
-      if(rickettsBoxDrag.which === 'top')    rickettsBox.top    = Math.min(ly, sb.bottom - margin);
-      if(rickettsBoxDrag.which === 'bottom') rickettsBox.bottom = Math.max(ly, sb.top + margin);
-      if(rickettsBoxDrag.which === 'left')   rickettsBox.left   = Math.min(lx, sb.right - margin);
-      if(rickettsBoxDrag.which === 'right')  rickettsBox.right  = Math.max(lx, sb.left + margin);
-    }
-    syncXiFromBox();
-    drawImg(); renderOvl();
   } else if(draggingOcc && occPlane){
     const r=svg.getBoundingClientRect();
     const n=toN(e.clientX-r.left,e.clientY-r.top);
@@ -1364,7 +1140,6 @@ window.addEventListener('mousemove',e=>{
 window.addEventListener('mouseup',e=>{
   if(_lastPointerType !== 'mouse') return;
   if(dragging){ snapState(); dragging=null; svg.style.cursor='crosshair'; }
-  if(rickettsBoxDrag){ snapState(); rickettsBoxDrag=null; }
   if(draggingOcc){ snapState(); draggingOcc=null; svg.style.cursor='crosshair'; occPlaneManual=true; }
   if(isPanning){
     svg.style.cursor='crosshair';
@@ -1707,58 +1482,8 @@ modeMenu.querySelectorAll('.mode-item').forEach(item => {
       currentMode === 'mcnamara' ? 'McNamara Analysis' :
       currentMode === 'downs'    ? 'Downs Analysis' :
       currentMode === 'steiner'  ? 'Steiner Analysis' :
-      currentMode === 'jarabak'  ? 'Jarabak Analysis' :
-      currentMode === 'ricketts' ? 'Ricketts Analysis' :
       'Eastman Analysis';
     modeMenu.classList.remove('open');
-
-    // Initialise Ricketts construction points (Xi, DC) when entering Ricketts mode
-    if(currentMode === 'ricketts'){
-      // Xi via calibrated box: 4 sides (R1-R4) placed at average offsets from Ar.
-      // Calibrated from 17 cases (normalised by S-N length):
-      //   R1 (anterior):  dx=+0.521, dy=+0.207
-      //   R2 (posterior): dx=+0.098, dy=+0.273
-      //   R3 (superior):  dx=+0.274, dy=-0.016
-      //   R4 (inferior):  dx=+0.420, dy=+0.742
-      // Xi = center of the box formed by these 4 points.
-      if(!pts['Xi'] && pts['Ar'] && pts['S'] && pts['N']){
-        const imgW = imgEl.naturalWidth, imgH = imgEl.naturalHeight;
-        const sx = pts['S'].x*imgW, sy = pts['S'].y*imgH;
-        const nx = pts['N'].x*imgW, ny = pts['N'].y*imgH;
-        const sn = Math.hypot(nx-sx, ny-sy);
-        const arX = pts['Ar'].x*imgW, arY = pts['Ar'].y*imgH;
-        // Box extents in image pixels
-        const r1x = arX + 0.521*sn;  // right (anterior)
-        const r2x = arX + 0.098*sn;  // left  (posterior)
-        const r3y = arY + (-0.016)*sn; // top (superior)
-        const r4y = arY + 0.742*sn;    // bottom (inferior)
-        // Store the box so it can be rendered and adjusted
-        rickettsBox = {
-          left:  r2x / imgW,
-          right: r1x / imgW,
-          top:   r3y / imgH,
-          bottom:r4y / imgH,
-          rot:   0
-        };
-        // Xi sits at the box center
-        pts['Xi'] = {
-          x: (r1x + r2x) / 2 / imgW,
-          y: (r3y + r4y) / 2 / imgH
-        };
-      }
-      // DC initial: projection of Co onto Ba-N line (user can drag to refine)
-      if(!pts['DC'] && pts['Ba'] && pts['N'] && pts['Co']){
-        const ba = pts['Ba'], n = pts['N'], co = pts['Co'];
-        const dx = n.x - ba.x, dy = n.y - ba.y;
-        const len2 = dx*dx + dy*dy;
-        const t = ((co.x - ba.x)*dx + (co.y - ba.y)*dy) / len2;
-        pts['DC'] = { x: ba.x + t*dx, y: ba.y + t*dy };
-      }
-      renderOvl();
-    } else {
-      renderOvl();
-    }
-
     // Auto re-analyse if any landmarks are placed
     if(Object.keys(pts).length > 0){
       setTimeout(function(){ document.getElementById('analyse-btn').click(); }, 50);
@@ -1797,10 +1522,6 @@ document.getElementById('analyse-btn').addEventListener('click',()=>{
       ? `<span class="mode-chip-downs">Downs Analysis</span>`
       : currentMode === 'steiner'
       ? `<span class="mode-chip-steiner">Steiner Analysis</span>`
-      : currentMode === 'jarabak'
-      ? `<span class="mode-chip-jarabak">Jarabak Analysis</span>`
-      : currentMode === 'ricketts'
-      ? `<span class="mode-chip-ricketts">Ricketts Analysis</span>`
       : `<span class="mode-chip-eastman">Eastman Analysis</span>`;
   body.appendChild(modeBadge);
 
@@ -1821,8 +1542,6 @@ document.getElementById('analyse-btn').addEventListener('click',()=>{
     currentMode === 'mcnamara' ? MEAS_MCNAMARA :
     currentMode === 'downs'    ? MEAS_DOWNS :
     currentMode === 'steiner'  ? MEAS_STEINER :
-    currentMode === 'jarabak'  ? MEAS_JARABAK :
-    currentMode === 'ricketts' ? MEAS_RICKETTS :
     MEAS;
 
   let cur = '';
@@ -1945,16 +1664,12 @@ document.getElementById('export-btn').addEventListener('click', async () => {
     currentMode === 'mcnamara' ? 'McNamara Analysis' :
     currentMode === 'downs'    ? 'Downs Analysis' :
     currentMode === 'steiner'  ? 'Steiner Analysis' :
-    currentMode === 'jarabak'  ? 'Jarabak Analysis' :
-    currentMode === 'ricketts' ? 'Ricketts Analysis' :
     'Eastman Analysis';
   const badgeColor =
     currentMode === 'key'      ? CLR.accent :
     currentMode === 'mcnamara' ? CLR.purple :
     currentMode === 'downs'    ? CLR.warn :
     currentMode === 'steiner'  ? [80,200,120] :
-    currentMode === 'jarabak'  ? [232,192,108] :
-    currentMode === 'ricketts' ? [255,102,204] :
     CLR.green;
   doc.setFontSize(7.5);
   doc.setFont('helvetica','bold');
@@ -2161,8 +1876,6 @@ document.getElementById('export-btn').addEventListener('click', async () => {
     currentMode === 'mcnamara' ? MEAS_MCNAMARA :
     currentMode === 'downs'    ? MEAS_DOWNS :
     currentMode === 'steiner'  ? MEAS_STEINER :
-    currentMode === 'jarabak'  ? MEAS_JARABAK :
-    currentMode === 'ricketts' ? MEAS_RICKETTS :
     MEAS;
 
   let curS = '';
@@ -2491,39 +2204,15 @@ setInterval(function(){ fetch('https://mujtaba1212-ceph-landmark-detector.hf.spa
     'UPM':'U4','UMT':'U6','LPM':'L4','LMT':'L6'
   };
 
-  var _aiCooldown = false;
-  var _aiSecs = 0;
-  var _aiCountTimer = null;
-
-  function _aiShowCountdown(){
-    var existing = document.getElementById('ai-cooldown-toast');
-    if(existing){ existing.remove(); }
-    var t = document.createElement('div');
-    t.id = 'ai-cooldown-toast';
-    t.innerHTML = 'Please wait <span id="ai-cd-num">'+_aiSecs+'</span>s';
-    document.getElementById('panel-lm').appendChild(t);
-    if(_aiCountTimer) clearInterval(_aiCountTimer);
-    _aiCountTimer = setInterval(function(){
-      var n = document.getElementById('ai-cd-num');
-      if(n) n.textContent = _aiSecs;
-    }, 500);
-  }
-
   document.getElementById('ai-detect-btn').addEventListener('click', function(){
     if(!imgEl){ alert('Please upload an X-ray image first!'); return; }
-    if(_aiCooldown){
-      _aiShowCountdown();
-      return;
-    }
-    _aiCooldown = true;
-    document.getElementById('ai-detect-btn').classList.add('ai-btn-cooldown');
 
     var overlay = document.getElementById('ai-overlay');
     var status  = document.getElementById('ai-status');
     var prog    = document.getElementById('ai-prog');
     var pct     = document.getElementById('ai-pct');
     var chipsEl = document.getElementById('ai-chips');
-    var lmNames = ['S','N','Or','Po','Ar','Co','A','ANS','PNS','B','Me','Pog','Gn','Go','Prn','Sn','Ls','Li',"Pog'",'Ba','Ptm','PM','U1tip','U1ap','L1tip','L1ap','U4','U6','L4','L6'];
+    var lmNames = ['S','N','Or','Po','Ar','Co','A','ANS','PNS','B','Me','Pog','Gn','Go','Prn','Sn','Ls','Li',"N'","Pog'",'U1tip','U1ap','L1tip','L1ap','U4','U6','L4','L6'];
     var msgs    = ['Initialising model…','Preprocessing image…','Detecting cranial base…','Mapping skeletal points…','Locating dental landmarks…','Tracing soft tissue…','Placing landmarks…'];
     overlay.style.display = 'flex';
     chipsEl.innerHTML = '';
@@ -2681,92 +2370,17 @@ setInterval(function(){ fetch('https://mujtaba1212-ceph-landmark-detector.hf.spa
             }
           }
 
-          // Derive Basion (Ba): offset from Articulare, normalized by S-N distance.
-          // Calibrated from 10 cases: dx=-0.115, dy=+0.081 of S-N length.
-          if(pts['Ar'] && pts['S'] && pts['N']){
-            var sx_px = pts['S'].x * imgW, sy_px = pts['S'].y * imgH;
-            var nx_px = pts['N'].x * imgW, ny_px = pts['N'].y * imgH;
-            var sn = Math.hypot(nx_px - sx_px, ny_px - sy_px);
-            var arX = pts['Ar'].x * imgW, arY = pts['Ar'].y * imgH;
-            var baX = arX + (-0.115 * sn);
-            var baY = arY + ( 0.081 * sn);
-            pts['Ba'] = { x: baX / imgW, y: baY / imgH };
-            markPlaced('Ba');
-            placed++;
-          }
-
-          // Derive Pterygomaxillare (Ptm): offset from PNS, normalized by S-N distance.
-          // Calibrated from 16 cases: dx=-0.095, dy=-0.231 of S-N length.
-          // After predicting, snap horizontally to the bright posterior wall of the
-          // pterygomaxillary fissure (the radiopaque vertical edge behind the dark fissure).
-          if(pts['PNS'] && pts['S'] && pts['N']){
-            var sx3 = pts['S'].x * imgW, sy3 = pts['S'].y * imgH;
-            var nx3 = pts['N'].x * imgW, ny3 = pts['N'].y * imgH;
-            var sn3 = Math.hypot(nx3 - sx3, ny3 - sy3);
-            var pnsX = pts['PNS'].x * imgW, pnsY = pts['PNS'].y * imgH;
-            var ptmX = pnsX + (-0.095 * sn3);
-            var ptmY = pnsY + (-0.231 * sn3);
-
-            // Snap: search ±5mm (~0.07 of S-N) around predicted X for the strongest
-            // dark→bright transition (left-to-right brightness rise = posterior wall).
-            try {
-              var scanCv = document.createElement('canvas');
-              scanCv.width = imgW; scanCv.height = imgH;
-              var sCtx = scanCv.getContext('2d');
-              sCtx.drawImage(imgEl, 0, 0, imgW, imgH);
-
-              var searchRadius = Math.round(0.07 * sn3); // ±5mm
-              var halfH = Math.round(0.04 * sn3);
-              var cx0 = Math.round(ptmX);
-              var cy0 = Math.round(ptmY);
-              var xMin = Math.max(0, cx0 - searchRadius);
-              var xMax = Math.min(imgW - 1, cx0 + searchRadius);
-              var yMin = Math.max(0, cy0 - halfH);
-              var yMax = Math.min(imgH - 1, cy0 + halfH);
-              var w = xMax - xMin + 1;
-              var bandH = yMax - yMin + 1;
-
-              var band = sCtx.getImageData(xMin, yMin, w, bandH).data;
-
-              // Mean brightness per column
-              var cols = new Array(w);
-              for(var ix = 0; ix < w; ix++){
-                var sum = 0;
-                for(var iy = 0; iy < bandH; iy++){
-                  var p = (iy * w + ix) * 4;
-                  sum += (band[p] + band[p+1] + band[p+2]) / 3;
-                }
-                cols[ix] = sum / bandH;
-              }
-
-              // Find strongest dark→bright rise (largest positive gradient)
-              var bestIdx = -1, bestRise = 0;
-              for(var k = 1; k < w; k++){
-                var rise = cols[k] - cols[k-1];
-                if(rise > bestRise){ bestRise = rise; bestIdx = k; }
-              }
-
-              if(bestIdx !== -1){ ptmX = xMin + bestIdx; }
-            } catch(e){
-              // fall back to predicted position
-            }
-
-            pts['Ptm'] = { x: ptmX / imgW, y: ptmY / imgH };
-            markPlaced('Ptm');
-            placed++;
-          }
-
-          // Derive Suprapogonion (PM): offset from Pog, normalized by S-N distance.
-          // Calibrated from 12 cases: dx=-0.011, dy=-0.068 of S-N length.
-          // Hidden until Ricketts analysis is selected.
-          if(pts['Pog'] && pts['S'] && pts['N']){
-            var sx4 = pts['S'].x * imgW, sy4 = pts['S'].y * imgH;
-            var nx4 = pts['N'].x * imgW, ny4 = pts['N'].y * imgH;
-            var sn4 = Math.hypot(nx4 - sx4, ny4 - sy4);
-            var pogX = pts['Pog'].x * imgW, pogY = pts['Pog'].y * imgH;
-            var pmX = pogX + (-0.011 * sn4);
-            var pmY = pogY + (-0.068 * sn4);
-            pts['PM'] = { x: pmX / imgW, y: pmY / imgH };
+          // Derive N' (soft tissue Nasion): offset from N, normalized by S-N distance.
+          // Calibrated from 12 cases: dx=0.0795, dy=0.0257 of S-N length.
+          if(pts['N'] && pts['S']){
+            var nx = pts['N'].x * imgW, ny = pts['N'].y * imgH;
+            var sx = pts['S'].x * imgW, sy = pts['S'].y * imgH;
+            var sn = Math.hypot(nx - sx, ny - sy);
+            pts['Np'] = {
+              x: (nx + 0.0795 * sn) / imgW,
+              y: (ny + 0.0257 * sn) / imgH
+            };
+            markPlaced('Np');
             placed++;
           }
 
@@ -2777,19 +2391,9 @@ setInterval(function(){ fetch('https://mujtaba1212-ceph-landmark-detector.hf.spa
           setTimeout(function(){
             cancelAnimationFrame(ringAnim);
             overlay.style.display = 'none';
-            _aiCooldown = false;
-            if(_aiCountTimer) clearInterval(_aiCountTimer);
-            document.getElementById('ai-detect-btn').classList.remove('ai-btn-cooldown');
-            var ct = document.getElementById('ai-cooldown-toast'); if(ct) ct.remove();
             prog.style.width = '0%';
             renderOvl();
             updateProg();
-            // AI disclaimer toast
-            var dt = document.createElement('div');
-            dt.id = 'ai-disclaimer-toast';
-            dt.textContent = 'AI suggested landmarks - please verify before use';
-            document.body.appendChild(dt);
-            setTimeout(function(){ dt.classList.add('hide'); setTimeout(function(){ dt.remove(); }, 600); }, 6000);
             setTimeout(function(){
               document.getElementById('analyse-btn').click();
             }, 400);
@@ -2798,10 +2402,6 @@ setInterval(function(){ fetch('https://mujtaba1212-ceph-landmark-detector.hf.spa
         .catch(function(err){
           cancelAnimationFrame(ringAnim);
           overlay.style.display = 'none';
-          _aiCooldown = false;
-          if(_aiCountTimer) clearInterval(_aiCountTimer);
-          document.getElementById('ai-detect-btn').classList.remove('ai-btn-cooldown');
-          var ct = document.getElementById('ai-cooldown-toast'); if(ct) ct.remove();
           prog.style.width = '0%';
           alert('AI detection failed.\n' + err.message);
         });
