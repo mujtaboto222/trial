@@ -779,6 +779,8 @@ function loadImg(file){
       };
       document.getElementById('analyse-btn').disabled = false;
       setActive(LM[0].id);
+      // Auto-trigger AI detection 300ms after upload (gives canvas time to render)
+      setTimeout(function(){ document.getElementById('ai-detect-btn').click(); }, 300);
     };
     imgEl.src = ev.target.result;
   };
@@ -2394,6 +2396,15 @@ setInterval(function(){ fetch('https://mujtaba1212-ceph-landmark-detector.hf.spa
             prog.style.width = '0%';
             renderOvl();
             updateProg();
+            // Show "AI suggested landmarks" disclaimer toast
+            var oldToast = document.getElementById('ai-disclaimer-toast');
+            if(oldToast) oldToast.remove();
+            var toast = document.createElement('div');
+            toast.id = 'ai-disclaimer-toast';
+            toast.textContent = 'AI suggested landmarks — Verify before use';
+            document.body.appendChild(toast);
+            setTimeout(function(){ toast.classList.add('hide'); }, 4000);
+            setTimeout(function(){ if(toast.parentNode) toast.remove(); }, 4700);
             setTimeout(function(){
               document.getElementById('analyse-btn').click();
             }, 400);
