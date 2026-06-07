@@ -44,8 +44,6 @@ const LM = [
    hint:'Cusp tip of the upper first premolar. Used with U6, L6, L4 to define the functional occlusal plane.'},
   {id:'L4',  abbr:'L4',  name:'Lower Premolar (cusp tip)',group:'Occlusal',
    hint:'Cusp tip of the lower first premolar. Used with U6, L6, U4 to define the functional occlusal plane.'},
-  {id:'Np',  abbr:"N'",  name:'ST Nasion',            group:'Soft Tissue',
-   hint:'Most anterior point of the soft tissue overlying Nasion (the bridge of the nose).'},
   {id:'Sn',  abbr:'Sn',  name:'Subnasale',           group:'Soft Tissue',
    hint:'Junction of the columella base and the upper lip — base of the nose, not the nose tip.'},
   {id:'Prn', abbr:'Prn', name:'Pronasale',           group:'Soft Tissue',
@@ -779,8 +777,6 @@ function loadImg(file){
       };
       document.getElementById('analyse-btn').disabled = false;
       setActive(LM[0].id);
-      // Auto-trigger AI detection 300ms after upload (gives canvas time to render)
-      setTimeout(function(){ document.getElementById('ai-detect-btn').click(); }, 300);
     };
     imgEl.src = ev.target.result;
   };
@@ -2214,7 +2210,7 @@ setInterval(function(){ fetch('https://mujtaba1212-ceph-landmark-detector.hf.spa
     var prog    = document.getElementById('ai-prog');
     var pct     = document.getElementById('ai-pct');
     var chipsEl = document.getElementById('ai-chips');
-    var lmNames = ['S','N','Or','Po','Ar','Co','A','ANS','PNS','B','Me','Pog','Gn','Go','Prn','Sn','Ls','Li',"N'","Pog'",'U1tip','U1ap','L1tip','L1ap','U4','U6','L4','L6'];
+    var lmNames = ['S','N','Or','Po','Ar','Co','A','ANS','PNS','B','Me','Pog','Gn','Go','Prn','Sn','Ls','Li',"Pog'",'U1tip','U1ap','L1tip','L1ap','U4','U6','L4','L6'];
     var msgs    = ['Initialising model…','Preprocessing image…','Detecting cranial base…','Mapping skeletal points…','Locating dental landmarks…','Tracing soft tissue…','Placing landmarks…'];
     overlay.style.display = 'flex';
     chipsEl.innerHTML = '';
@@ -2372,20 +2368,6 @@ setInterval(function(){ fetch('https://mujtaba1212-ceph-landmark-detector.hf.spa
             }
           }
 
-          // Derive N' (soft tissue Nasion): offset from N, normalized by S-N distance.
-          // Calibrated from 12 cases: dx=0.0795, dy=0.0257 of S-N length.
-          if(pts['N'] && pts['S']){
-            var nx = pts['N'].x * imgW, ny = pts['N'].y * imgH;
-            var sx = pts['S'].x * imgW, sy = pts['S'].y * imgH;
-            var sn = Math.hypot(nx - sx, ny - sy);
-            pts['Np'] = {
-              x: (nx + 0.0795 * sn) / imgW,
-              y: (ny + 0.0257 * sn) / imgH
-            };
-            markPlaced('Np');
-            placed++;
-          }
-
           apiDone = true;
           occPlaneManual = false; // reset so fit applies
           fitOccPlane();
@@ -2396,15 +2378,6 @@ setInterval(function(){ fetch('https://mujtaba1212-ceph-landmark-detector.hf.spa
             prog.style.width = '0%';
             renderOvl();
             updateProg();
-            // Show "AI suggested landmarks" disclaimer toast
-            var oldToast = document.getElementById('ai-disclaimer-toast');
-            if(oldToast) oldToast.remove();
-            var toast = document.createElement('div');
-            toast.id = 'ai-disclaimer-toast';
-            toast.textContent = 'AI suggested landmarks — Verify before use';
-            document.body.appendChild(toast);
-            setTimeout(function(){ toast.classList.add('hide'); }, 4000);
-            setTimeout(function(){ if(toast.parentNode) toast.remove(); }, 4700);
             setTimeout(function(){
               document.getElementById('analyse-btn').click();
             }, 400);
