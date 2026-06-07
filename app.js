@@ -68,6 +68,8 @@ const LM = [
    hint:'Geometric center of the ramus. Initialised automatically — drag to refine if needed.'},
   {id:'DC',  abbr:'DC',  name:'DC point',            group:'Ricketts', hidden:true,
    hint:'Center of the condyle neck on the Ba-N plane. Initialised automatically — drag to refine if needed.'},
+  {id:'U6d', abbr:'U6d', name:'Upper Molar (distal)', group:'Ricketts', hidden:true,
+   hint:'Distal-most point of the upper first molar crown. Auto-derived from U6 cusp tip — drag to refine if needed.'},
 ];
 
 const COLORS={'Cranial Base':'#58a6ff','Maxilla':'#3fb950','Mandible':'#f0883e','Occlusal':'#e8c06c','Soft Tissue':'#bc8cff','Ricketts':'#ff66cc'};
@@ -2783,6 +2785,21 @@ setInterval(function(){ fetch('https://mujtaba1212-ceph-landmark-detector.hf.spa
               y: (nyNp + 0.0257 * snNp) / imgH
             };
             markPlaced('Np');
+            placed++;
+          }
+
+          // Derive U6d (distal of upper first molar): offset from U6 cusp tip, normalized by S-N.
+          // Calibrated from 19 cases: dx=-0.124, dy=-0.062 of S-N length.
+          // Hidden until Ricketts analysis is selected.
+          if(pts['U6'] && pts['S'] && pts['N']){
+            var sxU6 = pts['S'].x * imgW, syU6 = pts['S'].y * imgH;
+            var nxU6 = pts['N'].x * imgW, nyU6 = pts['N'].y * imgH;
+            var snU6 = Math.hypot(nxU6 - sxU6, nyU6 - syU6);
+            var u6x = pts['U6'].x * imgW, u6y = pts['U6'].y * imgH;
+            pts['U6d'] = {
+              x: (u6x + (-0.124) * snU6) / imgW,
+              y: (u6y + (-0.062) * snU6) / imgH
+            };
             placed++;
           }
 
