@@ -11,7 +11,7 @@ const LM = [
    hint:'Intersection of the posterior ramus border with the inferior cranial base surface.'},
   {id:'Ba',  abbr:'Ba',  name:'Basion',              group:'Cranial Base',
    hint:'Most anterior-inferior point on the anterior margin of the foramen magnum, on the clivus. Auto-derived from Ar and S-N distance.'},
-  {id:'Ptm', abbr:'Ptm', name:'Pterygomaxillare',    group:'Cranial Base',
+  {id:'Ptm', abbr:'PtV', name:'Pterygoid Vertical',    group:'Cranial Base',
    hint:'Inferior-posterior point of the pterygomaxillary fissure — defines the Pterygoid Vertical (PTV) reference plane. Auto-derived from PNS and S-N distance.'},
   {id:'ANS', abbr:'ANS', name:'Ant. Nasal Spine',    group:'Maxilla',
    hint:'Tip of the anterior nasal spine — the sharp bony point at the base of the nasal aperture, projecting forward.'},
@@ -48,8 +48,6 @@ const LM = [
    hint:'Cusp tip of the upper first premolar. Used with U6, L6, L4 to define the functional occlusal plane.'},
   {id:'L4',  abbr:'L4',  name:'Lower Premolar (cusp tip)',group:'Occlusal',
    hint:'Cusp tip of the lower first premolar. Used with U6, L6, U4 to define the functional occlusal plane.'},
-  {id:'Np',  abbr:"N'",  name:'ST Nasion',            group:'Soft Tissue',
-   hint:'Most anterior point of the soft tissue overlying Nasion (the bridge of the nose).'},
   {id:'Sn',  abbr:'Sn',  name:'Subnasale',           group:'Soft Tissue',
    hint:'Junction of the columella base and the upper lip — base of the nose, not the nose tip.'},
   {id:'Prn', abbr:'Prn', name:'Pronasale',           group:'Soft Tissue',
@@ -68,8 +66,6 @@ const LM = [
    hint:'Geometric center of the ramus. Initialised automatically — drag to refine if needed.'},
   {id:'DC',  abbr:'DC',  name:'DC point',            group:'Ricketts', hidden:true,
    hint:'Center of the condyle neck on the Ba-N plane. Initialised automatically — drag to refine if needed.'},
-  {id:'U6d', abbr:'U6d', name:'Upper Molar (distal)', group:'Ricketts', hidden:true,
-   hint:'Distal-most point of the upper first molar crown. Auto-derived from U6 cusp tip — drag to refine if needed.'},
 ];
 
 const COLORS={'Cranial Base':'#58a6ff','Maxilla':'#3fb950','Mandible':'#f0883e','Occlusal':'#e8c06c','Soft Tissue':'#bc8cff','Ricketts':'#ff66cc'};
@@ -2527,7 +2523,7 @@ setInterval(function(){ fetch('https://mujtaba1212-ceph-landmark-detector.hf.spa
     var prog    = document.getElementById('ai-prog');
     var pct     = document.getElementById('ai-pct');
     var chipsEl = document.getElementById('ai-chips');
-    var lmNames = ['S','N','Or','Po','Ar','Co','A','ANS','PNS','B','Me','Pog','Gn','Go','Prn','Sn','Ls','Li',"N'","Pog'",'Ba','Ptm','PM','U1tip','U1ap','L1tip','L1ap','U4','U6','L4','L6'];
+    var lmNames = ['S','N','Or','Po','Ar','Co','A','ANS','PNS','B','Me','Pog','Gn','Go','Prn','Sn','Ls','Li',"Pog'",'Ba','Ptm','PM','U1tip','U1ap','L1tip','L1ap','U4','U6','L4','L6'];
     var msgs    = ['Initialising model…','Preprocessing image…','Detecting cranial base…','Mapping skeletal points…','Locating dental landmarks…','Tracing soft tissue…','Placing landmarks…'];
     overlay.style.display = 'flex';
     chipsEl.innerHTML = '';
@@ -2771,35 +2767,6 @@ setInterval(function(){ fetch('https://mujtaba1212-ceph-landmark-detector.hf.spa
             var pmX = pogX + (-0.011 * sn4);
             var pmY = pogY + (-0.068 * sn4);
             pts['PM'] = { x: pmX / imgW, y: pmY / imgH };
-            placed++;
-          }
-
-          // Derive N' (soft tissue Nasion): offset from N, normalized by S-N distance.
-          // Calibrated from 12 cases: dx=0.0795, dy=0.0257 of S-N length.
-          if(pts['N'] && pts['S']){
-            var sxNp = pts['S'].x * imgW, syNp = pts['S'].y * imgH;
-            var nxNp = pts['N'].x * imgW, nyNp = pts['N'].y * imgH;
-            var snNp = Math.hypot(nxNp - sxNp, nyNp - syNp);
-            pts['Np'] = {
-              x: (nxNp + 0.0795 * snNp) / imgW,
-              y: (nyNp + 0.0257 * snNp) / imgH
-            };
-            markPlaced('Np');
-            placed++;
-          }
-
-          // Derive U6d (distal of upper first molar): offset from U6 cusp tip, normalized by S-N.
-          // Calibrated from 19 cases: dx=-0.124, dy=-0.062 of S-N length.
-          // Hidden until Ricketts analysis is selected.
-          if(pts['U6'] && pts['S'] && pts['N']){
-            var sxU6 = pts['S'].x * imgW, syU6 = pts['S'].y * imgH;
-            var nxU6 = pts['N'].x * imgW, nyU6 = pts['N'].y * imgH;
-            var snU6 = Math.hypot(nxU6 - sxU6, nyU6 - syU6);
-            var u6x = pts['U6'].x * imgW, u6y = pts['U6'].y * imgH;
-            pts['U6d'] = {
-              x: (u6x + (-0.124) * snU6) / imgW,
-              y: (u6y + (-0.062) * snU6) / imgH
-            };
             placed++;
           }
 
