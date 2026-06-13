@@ -90,7 +90,7 @@ const MEAS_RICKETTS = [
 
   {s:'Skeletal', n:'Mandibular Arc',
    d:'Angle at Xi between Xi-DC and Xi-PM (curvature of corpus to ramus)',
-   norm:[26,4], u:'°', c:p=> ang(p.DC, p.Xi, p.PM)},
+   norm:[26,4], u:'°', c:p=> 180 - ang(p.DC, p.Xi, p.PM)},
 
   {s:'Skeletal', n:'Convexity of Point A',
    d:'Perpendicular distance from A to N-Pog line (+ve = anterior)',
@@ -110,8 +110,8 @@ const MEAS_RICKETTS = [
    norm:[1,2], u:'mm', c:p=> p2line(p.L1tip, p.A, p.Pog)},
 
   {s:'Dental', n:'Upper Molar to PTV',
-   d:'Horizontal distance from U6d to vertical line through Ptm',
-   norm:[21,3], u:'mm', c:p=> Math.abs(p.U6d.x - p.Ptm.x)},
+   d:'Horizontal distance from U6 to vertical line through Ptm',
+   norm:[21,3], u:'mm', c:p=> Math.abs(p.U6.x - p.Ptm.x)},
 
   {s:'Dental', n:'Interincisal Angle',
    d:'Angle between upper and lower incisor long axes',
