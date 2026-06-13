@@ -110,7 +110,7 @@ const MEAS_RICKETTS = [
    norm:[1,2], u:'mm', c:p=> p2line(p.L1tip, p.A, p.Pog)},
 
   {s:'Dental', n:'Upper Molar to PTV',
-   d:'Horizontal distance from U6 to vertical line through Ptm',
+   d:'Horizontal distance from U6 to vertical line through Ptv',
    norm:[21,3], u:'mm', c:p=> Math.abs(p.U6.x - p.Ptm.x)},
 
   {s:'Dental', n:'Interincisal Angle',
