@@ -73,7 +73,7 @@ const MEAS_JARABAK = [
 const MEAS_RICKETTS = [
   // ── Skeletal ─────────────────────────────────
   {s:'Skeletal', n:'Facial Axis',
-   d:'Angle between Ba-N line and Ptm-Gn (facial axis) line',
+   d:'Angle between Ba-N line and Pt-Gn (facial axis) line',
    norm:[90,3], u:'°', c:p=> lineAng([p.Ba,p.N],[p.Ptm,p.Gn])},
 
   {s:'Skeletal', n:'Facial Depth',
@@ -109,9 +109,9 @@ const MEAS_RICKETTS = [
    d:'Perpendicular distance from L1 tip to A-Pog line',
    norm:[1,2], u:'mm', c:p=> p2line(p.L1tip, p.A, p.Pog)},
 
-  {s:'Dental', n:'Upper Molar to PTV',
-   d:'Horizontal distance from U6 to vertical line through Ptv',
-   norm:[21,3], u:'mm', c:p=> Math.abs(p.U6.x - p.Ptm.x)},
+  {s:'Dental', n:'Upper Molar to Pt',
+   d:'Horizontal distance from U6d to vertical line through Pt',
+   norm:[21,3], u:'mm', c:p=> Math.abs(p.U6d.x - p.Ptm.x)},
 
   {s:'Dental', n:'Interincisal Angle',
    d:'Angle between upper and lower incisor long axes',
